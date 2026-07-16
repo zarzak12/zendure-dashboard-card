@@ -31,3 +31,5 @@ jobs:
       - name: dist must be up to date with src
         run: git diff --exit-code dist/
       - run: node --check dist/zendure-dashboard-card.js
+      - name: Load dist as ES module (like Home Assistant does)
+        run: node scripts/test-module-load.mjs

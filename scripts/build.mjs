@@ -23,12 +23,25 @@ const banner = `/*!
  */
 `;
 
+/**
+ * GSAP's UMD header runs `(t = t || self).window = t.window || {}`.
+ * In a classic <script> (sloppy mode) the illegal write to the getter-only
+ * `window.window` fails SILENTLY — but Home Assistant loads Lovelace
+ * resources as ES modules (strict mode), where it throws:
+ *   TypeError: Cannot set property window of #<Window> which has only a getter
+ * Fix: shadow `self` with a plain writable object whose `window` points to
+ * the real window — the UMD assigns onto that object, then hands the real
+ * window to the factory, so gsap/DrawSVGPlugin still land on window.*.
+ */
+const wrapVendor = (code) => `;(function (self) {
+${code}
+}).call(undefined, typeof window !== "undefined" ? { window: window } : { window: globalThis });
+`;
+
 const out =
   banner +
-  read("vendor/gsap.min.js") +
-  "\n;\n" +
-  read("vendor/DrawSVGPlugin.min.js") +
-  "\n;\n" +
+  wrapVendor(read("vendor/gsap.min.js")) +
+  wrapVendor(read("vendor/DrawSVGPlugin.min.js")) +
   cardSource;
 
 mkdirSync(join(root, "dist"), { recursive: true });
