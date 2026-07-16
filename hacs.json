@@ -1,0 +1,6 @@
+{
+  "name": "Zendure Dashboard Card",
+  "render_readme": true,
+  "filename": "zendure-dashboard-card.js",
+  "homeassistant": "2024.8.0"
+}
