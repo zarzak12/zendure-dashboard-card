@@ -11,15 +11,16 @@ A modern, fully configurable Lovelace card to **monitor and control your Zendure
 
 ## Features
 
-- 🔋 **Battery hero view** — state of charge ring, stored kWh, live charge/discharge power
-- ⚡ **Animated energy flow** — glowing GSAP-powered "comet" pulses race along each wire (solar → battery → home → grid), speed proportional to power
+- 🌊 **Living battery vessel** — a glass cell fills with animated liquid to the exact state of charge; waves speed up with power throughput, bubbles rise while charging, colour shifts green → amber → red as it drains
+- ⏱️ **Smart projection** — "Full in 2 h 15" / "Runtime 5 h 30", computed from net power and capacity (something no native HA card shows)
+- 📈 **Clean power readouts** — solar / home / grid values with direction arrows (no redundant flow diagram — HA's energy card already does that)
 - 📊 **Statistics chips** — temperature + any extra sensors you pick
 - 🎛️ **Built-in controls** — operation mode, charge/discharge limits, switches (no extra cards needed)
 - 🧙 **Full visual editor** — no YAML required, with **automatic Zendure device detection**
 - 🌍 **English + French**, follows the Home Assistant language automatically
 - 🌗 **Light & dark themes**, colorblind-safe validated palette, `prefers-reduced-motion` support
 - 📱 Responsive — works in Masonry and Sections dashboards, compact mode for dense layouts
-- 🪶 Single self-contained file — [GSAP](https://gsap.com) + DrawSVGPlugin are bundled (no CDN, works offline)
+- 🪶 Single self-contained file — [GSAP](https://gsap.com) is bundled (no CDN, works offline)
 
 Works with the [Zendure Home Assistant integration](https://github.com/Zendure/Zendure-HA) and any other integration — every entity can be selected manually.
 
@@ -83,7 +84,9 @@ switch_entities:
 | `grid_entity` | entity | — | Grid input power (`gridInputPower`), negative = export |
 | `charge_entity` | entity | — | Power flowing **into** the battery (`outputPackPower`) |
 | `discharge_entity` | entity | — | Power flowing **out of** the battery (`packInputPower`) |
-| `energy_entity` | entity | — | Stored energy in kWh, shown inside the ring |
+| `energy_entity` | entity | — | Stored energy in kWh, shown under the SoC; also used to auto-derive capacity for the projection |
+| `capacity` | number | — | Battery capacity in kWh — fallback for the "full in / runtime" projection when no kWh sensor exists |
+| `reserve_soc` | number | `0` | Floor (%) used as "empty" for the runtime estimate |
 | `temp_entity` | entity | — | Temperature chip in the statistics row |
 | `mode_entity` | entity | — | `select` entity rendered as segmented buttons |
 | `select_entities` | list | `[]` | Extra `select` entities rendered as segmented buttons (e.g. AC charge/discharge mode). Known option values (`input`, `output`, `smart`, `manual`, `off`) are translated automatically |
@@ -91,7 +94,7 @@ switch_entities:
 | `discharge_limit_entity` | entity | — | `number` entity rendered as a slider |
 | `stats_entities` | list | `[]` | Extra sensors shown as chips |
 | `switch_entities` | list | `[]` | `switch` / `input_boolean` entities shown as toggles |
-| `show_flow` | bool | `true` | Show the animated energy flow diagram |
+| `show_flow` | bool | `true` | Show the power readouts strip (solar / home / grid) |
 | `show_stats` | bool | `true` | Show the statistics row |
 | `show_controls` | bool | `true` | Show the control section |
 | `compact` | bool | `false` | Dense single-block layout (SoC bar + power chips) |
@@ -116,7 +119,7 @@ zendure-home-color: "#e87ba4"
 
 ## Development
 
-The card source lives in [`src/zendure-dashboard-card.js`](src/zendure-dashboard-card.js). The distributable file bundles GSAP + DrawSVGPlugin ([`vendor/`](vendor/)) so the card works offline and without CDN access:
+The card source lives in [`src/zendure-dashboard-card.js`](src/zendure-dashboard-card.js). The distributable file bundles GSAP ([`vendor/`](vendor/)) so the card works offline and without CDN access:
 
 ```bash
 node scripts/build.mjs   # → dist/zendure-dashboard-card.js
@@ -138,15 +141,16 @@ Une carte Lovelace moderne et entièrement paramétrable pour **surveiller et pi
 
 ## Fonctionnalités
 
-- 🔋 **Vue batterie** — anneau de niveau de charge, kWh stockés, puissance de charge/décharge en direct
-- ⚡ **Flux d'énergie animé** — « comètes » lumineuses propulsées par GSAP le long de chaque câble (solaire → batterie → maison → réseau), vitesse proportionnelle à la puissance
+- 🌊 **Batterie-réservoir vivante** — une cuve en verre se remplit d'un liquide animé au niveau exact du SoC ; les vagues accélèrent avec la puissance, des bulles montent pendant la charge, la couleur passe vert → ambre → rouge en se vidant
+- ⏱️ **Projection intelligente** — « Pleine dans 2 h 15 » / « Autonomie 5 h 30 », calculée depuis la puissance nette et la capacité (ce qu'aucune carte HA native n'affiche)
+- 📈 **Puissances épurées** — solaire / maison / réseau avec flèches de sens (pas de diagramme de flux redondant — la carte énergie de HA le fait déjà)
 - 📊 **Puces de statistiques** — température + tous les capteurs de votre choix
 - 🎛️ **Contrôles intégrés** — mode de fonctionnement, limites de charge/décharge, interrupteurs
 - 🧙 **Éditeur visuel complet** — aucun YAML nécessaire, avec **détection automatique des appareils Zendure**
 - 🌍 **Français + anglais**, suit automatiquement la langue de Home Assistant
 - 🌗 **Thèmes clair et sombre**, palette validée accessible aux daltoniens
 - 📱 Responsive, mode compact pour les tableaux de bord denses
-- 🪶 Un seul fichier autonome — GSAP + DrawSVGPlugin intégrés (pas de CDN, fonctionne hors-ligne)
+- 🪶 Un seul fichier autonome — GSAP intégré (pas de CDN, fonctionne hors-ligne)
 
 ## Installation
 

@@ -8,7 +8,7 @@
 (() => {
   "use strict";
 
-  const CARD_VERSION = "1.0.0";
+  const CARD_VERSION = "1.1.0";
   const CARD_TAG = "zendure-dashboard-card";
   const EDITOR_TAG = "zendure-dashboard-card-editor";
 
@@ -29,6 +29,10 @@
       unavailable: "Unavailable",
       low_battery: "Low battery",
       stored: "stored",
+      full_in: "Full in",
+      autonomy: "Runtime",
+      full: "Battery full",
+      empty: "Battery empty",
       temperature: "Temperature",
       controls: "Controls",
       stats: "Statistics",
@@ -58,8 +62,10 @@
       ed_charge: "Battery charge power",
       ed_discharge: "Battery discharge power",
       ed_energy: "Stored energy (kWh)",
+      ed_capacity: "Battery capacity (kWh)",
+      ed_capacity_helper: "Used for the “full in / runtime” estimate when no kWh sensor exists. Auto-derived from the kWh sensor otherwise.",
       ed_temp: "Temperature",
-      ed_show_flow: "Energy flow diagram",
+      ed_show_flow: "Power readouts (solar / home / grid)",
       ed_show_stats: "Statistics row",
       ed_show_controls: "Control section",
       ed_compact: "Compact mode",
@@ -85,6 +91,10 @@
       unavailable: "Indisponible",
       low_battery: "Batterie faible",
       stored: "stockés",
+      full_in: "Pleine dans",
+      autonomy: "Autonomie",
+      full: "Batterie pleine",
+      empty: "Batterie vide",
       temperature: "Température",
       controls: "Contrôles",
       stats: "Statistiques",
@@ -114,8 +124,10 @@
       ed_charge: "Puissance de charge batterie",
       ed_discharge: "Puissance de décharge batterie",
       ed_energy: "Énergie stockée (kWh)",
+      ed_capacity: "Capacité batterie (kWh)",
+      ed_capacity_helper: "Sert à l'estimation « pleine dans / autonomie » sans capteur kWh. Déduite automatiquement du capteur kWh sinon.",
       ed_temp: "Température",
-      ed_show_flow: "Diagramme de flux d'énergie",
+      ed_show_flow: "Puissances (solaire / maison / réseau)",
       ed_show_stats: "Ligne de statistiques",
       ed_show_controls: "Section de contrôle",
       ed_compact: "Mode compact",
@@ -153,6 +165,9 @@
     down: "M11,4H13V16L18.5,10.5L19.92,11.92L12,19.84L4.08,11.92L5.5,10.5L11,16V4Z",
     up: "M13,20H11V8L5.5,13.5L4.08,12.08L12,4.16L19.92,12.08L18.5,13.5L13,8V20Z",
     alert: "M13,14H11V9H13M13,18H11V16H13M1,21H23L12,2L1,21Z",
+    clock:
+      "M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z",
+    flash: "M7,2V13H10V22L17,10H13L17,2H7Z",
   };
 
   const svgIcon = (name, cls = "") =>
@@ -175,6 +190,38 @@
       .replace(/[_-]+/g, " ")
       .replace(/\b\w/g, (c) => c.toUpperCase())
       .trim();
+  }
+
+  /**
+   * Build a filled "wave" path: a wavy top edge from startX→endX closed down to
+   * floorY. The pattern repeats every `period`, and we overshoot both edges, so
+   * translating the whole path by one period in X loops seamlessly.
+   */
+  function wavePath(amp, { startX = -28, endX = 134, period = 46, baseY = 6, floorY = 70 } = {}) {
+    const half = period / 2;
+    let d = `M ${startX} ${baseY}`;
+    let x = startX;
+    let up = true;
+    while (x < endX) {
+      const nx = x + half;
+      d += ` Q ${x + half / 2} ${baseY + (up ? -amp : amp)} ${nx} ${baseY}`;
+      x = nx;
+      up = !up;
+    }
+    return `${d} L ${x} ${floorY} L ${startX} ${floorY} Z`;
+  }
+
+  /* Vessel geometry (viewBox 0 0 132 208) — interior cell the water fills. */
+  const CELL = { top: 20, bottom: 196, get height() { return this.bottom - this.top; } };
+
+  function fmtDuration(hrs) {
+    if (!Number.isFinite(hrs) || hrs <= 0) return null;
+    if (hrs >= 48) return "> 48 h";
+    const totalMin = Math.round(hrs * 60);
+    const hh = Math.floor(totalMin / 60);
+    const mm = totalMin % 60;
+    if (hh <= 0) return `${mm} min`;
+    return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`;
   }
 
   function detectDevices(hass) {
@@ -312,13 +359,8 @@
     invert_battery: false,
     low_soc: 15,
     flow_threshold: 10,
-  };
-
-  /* Flow geometry — viewBox 0 0 400 240 */
-  const FLOW_PATHS = {
-    solar: "M 90 66 Q 115 75 150 95",
-    grid: "M 90 174 Q 115 165 150 145",
-    home: "M 258 120 L 302 120",
+    capacity: 0,
+    reserve_soc: 0,
   };
 
   /* ------------------------------------------------------------------ *
@@ -330,9 +372,10 @@
       this.attachShadow({ mode: "open" });
       this._built = false;
       this._els = {};
-      this._flow = {};
+      this._tweens = {};
       this._lastStates = {};
       this._sliderDrag = {};
+      this._uid = Math.random().toString(36).slice(2, 8);
     }
 
     static getConfigElement() {
@@ -401,7 +444,7 @@
       const h = this._hass;
       this.toggleAttribute("dark", !!(h && h.themes && h.themes.darkMode));
 
-      const hasFlow =
+      const hasStrip =
         c.show_flow && !c.compact &&
         (c.solar_entity || c.home_entity || c.grid_entity);
 
@@ -417,7 +460,7 @@
                 ? `<div class="empty">${svgIcon("battery")}<p>${t(h, "not_configured")}</p></div>`
                 : c.compact
                   ? this._compactHtml()
-                  : this._heroHtml(hasFlow)
+                  : this._heroHtml() + (hasStrip ? this._stripHtml() : "")
             }
             ${configured && !c.compact && c.show_stats ? this._statsHtml() : ""}
             ${configured && !c.compact && c.show_controls ? this._controlsHtml() : ""}
@@ -442,72 +485,82 @@
         </header>`;
     }
 
-    _nodeHtml(key, icon, label) {
+    /** The "battery vessel": a glass cell filled with animated liquid to SoC. */
+    _vesselSvg() {
+      const uid = this._uid;
+      const clip = `zdc-cell-${uid}`;
+      // Two parallax wave crests + a solid body that fills down past the cell.
+      const waves = `
+        <path class="zdc-wave zdc-wave-2" d="${wavePath(3.4)}"/>
+        <path class="zdc-wave zdc-wave-1" d="${wavePath(5.2)}"/>`;
+      const body = `<rect class="zdc-fill" x="-30" y="6" width="196" height="320"/>`;
+      const bubbles = Array.from({ length: 6 }, (_, i) => {
+        const cx = 30 + ((i * 79) % 74);
+        const r = 1.4 + ((i * 7) % 3) * 0.6;
+        return `<circle class="zdc-bubble" data-i="${i}" cx="${cx}" cy="${CELL.bottom}" r="${r}"/>`;
+      }).join("");
       return `
-        <div class="node n-${key}" id="node-${key}" role="button" tabindex="0">
-          <div class="circle">${svgIcon(icon)}<span class="val" id="val-${key}">—</span></div>
-          <span class="lbl">${label}</span>
-        </div>`;
+        <svg class="zdc-vessel" viewBox="0 0 132 208" role="img" aria-label="battery level">
+          <defs>
+            <clipPath id="${clip}">
+              <rect x="13" y="${CELL.top - 1}" width="106" height="${CELL.height + 2}" rx="13"/>
+            </clipPath>
+          </defs>
+          <rect class="zdc-cap" x="52" y="2" width="28" height="11" rx="4.5"/>
+          <g clip-path="url(#${clip})">
+            <rect class="zdc-void" x="13" y="${CELL.top - 1}" width="106" height="${CELL.height + 2}"/>
+            <g class="zdc-water" id="zdc-water">
+              ${body}
+              <g class="zdc-bubbles" id="zdc-bubbles">${bubbles}</g>
+              ${waves}
+            </g>
+          </g>
+          <rect class="zdc-glass" x="6" y="12" width="120" height="192" rx="20"/>
+          <rect class="zdc-shine" x="20" y="26" width="14" height="150" rx="7"/>
+        </svg>`;
     }
 
-    _heroHtml(hasFlow) {
-      const c = this._config;
+    _heroHtml() {
       const h = this._hass;
-      let svg = "";
-      let nodes = "";
-      if (hasFlow) {
-        const flows = [];
-        if (c.solar_entity)
-          flows.push(this._flowSvg("solar", FLOW_PATHS.solar));
-        if (c.grid_entity) flows.push(this._flowSvg("grid", FLOW_PATHS.grid));
-        if (c.home_entity) flows.push(this._flowSvg("home", FLOW_PATHS.home));
-        const defs = `<defs>
-          <filter id="zdc-glow" x="-60%" y="-60%" width="220%" height="220%">
-            <feGaussianBlur stdDeviation="2.4" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>`;
-        svg = `<svg class="wires" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet">${defs}${flows.join("")}</svg>`;
-        if (c.solar_entity) nodes += this._nodeHtml("solar", "sun", t(h, "solar"));
-        if (c.grid_entity) nodes += this._nodeHtml("grid", "tower", t(h, "grid"));
-        if (c.home_entity) nodes += this._nodeHtml("home", "home", t(h, "home"));
-      }
       return `
-        <section class="flow ${hasFlow ? "" : "solo"}">
-          ${svg}
-          ${nodes}
-          <div class="hero" id="hero" role="button" tabindex="0">
-            <div class="ring" id="ring">
-              <div class="ring-in">
-                <span class="soc" id="soc">—</span>
-                <span class="kwh" id="kwh"></span>
-                <span class="batt-power" id="batt-power"></span>
-              </div>
-            </div>
-            <span class="lbl">${t(h, "battery")}</span>
+        <section class="hero" id="hero" role="button" tabindex="0"
+                 aria-label="${t(h, "battery")}">
+          ${this._vesselSvg()}
+          <div class="hero-info">
+            <div class="soc" id="soc">—</div>
+            <div class="kwh" id="kwh"></div>
+            <div class="eta" id="eta"></div>
           </div>
         </section>`;
     }
 
-    _flowSvg(key, path) {
-      return `
-        <path class="wire w-${key}" d="${path}"/>
-        <path class="comet c-${key}" d="${path}" filter="url(#zdc-glow)"/>`;
+    _stripHtml() {
+      const c = this._config;
+      const h = this._hass;
+      const item = (key, icon, label, eid) => `
+        <button class="rd r-${key}" id="rd-${key}" data-more="${eid}">
+          <span class="rd-top">${svgIcon(icon)}<span class="rd-l">${label}</span></span>
+          <span class="rd-v"><span class="rd-arrow" id="rda-${key}"></span><span id="rdv-${key}">—</span></span>
+        </button>`;
+      const items = [];
+      if (c.solar_entity) items.push(item("solar", "sun", t(h, "solar"), c.solar_entity));
+      if (c.home_entity) items.push(item("home", "home", t(h, "home"), c.home_entity));
+      if (c.grid_entity) items.push(item("grid", "tower", t(h, "grid"), c.grid_entity));
+      return `<section class="strip">${items.join("")}</section>`;
     }
 
     _compactHtml() {
       const c = this._config;
       const h = this._hass;
       const mini = [];
-      if (c.solar_entity)
-        mini.push(`<div class="mini m-solar" id="node-solar" role="button" tabindex="0">${svgIcon("sun")}<span id="val-solar">—</span></div>`);
-      if (c.home_entity)
-        mini.push(`<div class="mini m-home" id="node-home" role="button" tabindex="0">${svgIcon("home")}<span id="val-home">—</span></div>`);
-      if (c.grid_entity)
-        mini.push(`<div class="mini m-grid" id="node-grid" role="button" tabindex="0">${svgIcon("tower")}<span id="val-grid">—</span></div>`);
+      const m = (key, icon, eid) =>
+        `<button class="mini m-${key}" data-more="${eid}">${svgIcon(icon)}<span id="rdv-${key}">—</span></button>`;
+      if (c.solar_entity) mini.push(m("solar", "sun", c.solar_entity));
+      if (c.home_entity) mini.push(m("home", "home", c.home_entity));
+      if (c.grid_entity) mini.push(m("grid", "tower", c.grid_entity));
       return `
         <section class="cbody">
-          <div class="crow" id="hero" role="button" tabindex="0">
+          <div class="crow" id="hero" data-more="${c.soc_entity}" role="button" tabindex="0">
             <span class="soc" id="soc">—</span>
             <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
           </div>
@@ -598,29 +651,21 @@
         statusTxt: $("#status .pill-txt"),
         soc: $("#soc"),
         kwh: $("#kwh"),
-        ring: $("#ring"),
-        battPower: $("#batt-power"),
+        eta: $("#eta"),
         barFill: $("#bar-fill"),
         hero: $("#hero"),
+        water: $("#zdc-water"),
+        bubbles: $("#zdc-bubbles"),
+        waves: this.shadowRoot.querySelectorAll(".zdc-wave"),
       };
       this._killTweens();
-      this._flow = {};
-      for (const key of ["solar", "grid", "home"]) {
-        this._flow[key] = {
-          val: $(`#val-${key}`),
-          node: $(`#node-${key}`),
-          wire: $(`.w-${key}`),
-          comet: $(`.c-${key}`),
-          tl: null,
-          dir: 0,
-          lastDur: 0,
-        };
-      }
-      // GSAP + DrawSVGPlugin are bundled above this code in the dist file
+      this._waterY = null;
+
+      // GSAP is bundled above this code in the dist file
       this._gsapOK = false;
-      if (!this._reducedMotion() && window.gsap && window.DrawSVGPlugin) {
-        window.gsap.registerPlugin(window.DrawSVGPlugin);
+      if (!this._reducedMotion() && window.gsap) {
         this._gsapOK = true;
+        this._setupVesselTweens();
       }
     }
 
@@ -631,15 +676,48 @@
       );
     }
 
-    _killTweens() {
-      if (!this._flow) return;
-      for (const key of Object.keys(this._flow)) {
-        const f = this._flow[key];
-        if (f && f.tl) {
-          f.tl.kill();
-          f.tl = null;
-        }
+    /** Infinite wave drift + rising bubbles, paused until there is power flow. */
+    _setupVesselTweens() {
+      const G = window.gsap;
+      const e = this._els;
+      if (!e.water || !e.waves.length) return;
+      const period = 46;
+
+      // Parallax: two crests drift at different speeds; timeScale set by power.
+      this._tweens.wave1 = G.to(e.waves[e.waves.length - 1], {
+        x: -period, duration: 2.4, ease: "none", repeat: -1,
+      });
+      if (e.waves.length > 1) {
+        this._tweens.wave2 = G.to(e.waves[0], {
+          x: -period, duration: 3.6, ease: "none", repeat: -1,
+        });
       }
+
+      // Bubbles rise through the water (local coords: y=0 is the surface).
+      const bubbles = e.bubbles ? e.bubbles.querySelectorAll(".zdc-bubble") : [];
+      this._tweens.bubbles = G.timeline({ repeat: -1, paused: true });
+      bubbles.forEach((b, i) => {
+        const dur = 1.8 + (i % 3) * 0.5;
+        this._tweens.bubbles.to(
+          b,
+          {
+            keyframes: [
+              { attr: { cy: 150 }, opacity: 0, duration: 0 },
+              { opacity: 0.8, duration: 0.3 },
+              { attr: { cy: 6 }, opacity: 0, duration: dur, ease: "sine.out" },
+            ],
+          },
+          i * 0.4
+        );
+      });
+      this._tweens.bubbles.pause();
+    }
+
+    _killTweens() {
+      for (const k of Object.keys(this._tweens || {})) {
+        if (this._tweens[k]) this._tweens[k].kill();
+      }
+      this._tweens = {};
     }
 
     disconnectedCallback() {
@@ -648,22 +726,20 @@
     }
 
     _bindEvents() {
-      const c = this._config;
       const root = this.shadowRoot;
 
-      const clickable = [
-        [this._els.hero, c.soc_entity],
-        [this._flow.solar.node, c.solar_entity],
-        [this._flow.home.node, c.home_entity],
-        [this._flow.grid.node, c.grid_entity],
-      ];
-      for (const [el, eid] of clickable) {
-        if (!el || !eid) continue;
+      // Anything with data-more opens the entity's more-info dialog.
+      root.querySelectorAll("[data-more]").forEach((el) => {
+        const eid = el.getAttribute("data-more");
+        if (!eid) return;
         el.addEventListener("click", () => moreInfo(this, eid));
         el.addEventListener("keydown", (ev) => {
-          if (ev.key === "Enter" || ev.key === " ") moreInfo(this, eid);
+          if (ev.key === "Enter" || ev.key === " ") {
+            ev.preventDefault();
+            moreInfo(this, eid);
+          }
         });
-      }
+      });
 
       root.querySelectorAll(".chip").forEach((chip) => {
         chip.addEventListener("click", () => moreInfo(this, chip.dataset.entity));
@@ -748,56 +824,54 @@
         this._els.statusTxt.textContent = t(h, statusKey);
       }
 
-      // Battery hero
+      const low = soc !== null && soc <= c.low_soc;
+      const warn = soc !== null && soc <= c.low_soc * 2 && !low;
+      const level = low ? "crit" : warn ? "warn" : "ok";
+
+      // Big SoC number
       if (this._els.soc) {
-        const low = soc !== null && soc <= c.low_soc;
         this._els.soc.innerHTML =
           soc === null
             ? "—"
             : `${low ? svgIcon("alert", "warn-ic") : ""}${Math.round(soc)}<i>%</i>`;
-        this._els.soc.classList.toggle("low", low);
+        this._els.soc.className = `soc l-${level}`;
       }
-      if (this._els.ring && soc !== null) {
-        const pct = Math.max(0, Math.min(100, soc));
-        let ringColor = "var(--zdc-batt)";
-        if (soc <= c.low_soc) ringColor = "var(--zdc-crit)";
-        else if (soc <= c.low_soc * 2) ringColor = "var(--zdc-warn)";
-        this._els.ring.style.background = `conic-gradient(${ringColor} ${pct}%, var(--zdc-track) 0)`;
-      }
-      if (this._els.barFill && soc !== null) {
-        const pct = Math.max(0, Math.min(100, soc));
-        this._els.barFill.style.width = `${pct}%`;
-        this._els.barFill.style.background =
-          soc <= c.low_soc
-            ? "var(--zdc-crit)"
-            : soc <= c.low_soc * 2
-              ? "var(--zdc-warn)"
-              : "var(--zdc-batt)";
-      }
+
+      // Stored energy (measured, or estimated from capacity)
+      const cap = this._capacityKwh();
       if (this._els.kwh) {
-        const e = num(h, c.energy_entity);
+        let e = num(h, c.energy_entity);
+        if (e === null && cap !== null && soc !== null) e = (cap * soc) / 100;
         this._els.kwh.textContent = e !== null ? `${e.toFixed(2)} kWh` : "";
       }
-      if (this._els.battPower) {
-        if (net !== null && Math.abs(net) > thr) {
-          const up = net > 0;
-          this._els.battPower.innerHTML = `${svgIcon(up ? "down" : "up")}${fmtPower(h, Math.abs(net))}`;
-          this._els.battPower.className = `batt-power ${up ? "bp-in" : "bp-out"}`;
+
+      // ETA — full in / runtime
+      if (this._els.eta) {
+        const eta = this._computeEta(soc, net, cap, statusKey);
+        if (eta) {
+          this._els.eta.innerHTML = `${svgIcon(eta.icon)}<span>${eta.text}</span>`;
+          this._els.eta.classList.add("show");
         } else {
-          this._els.battPower.textContent = "";
-          this._els.battPower.className = "batt-power";
+          this._els.eta.innerHTML = "";
+          this._els.eta.classList.remove("show");
         }
       }
 
-      // Nodes + flow animation
-      this._updateFlow("solar", solar, solar !== null && solar > thr, 1);
-      this._updateFlow("home", home, home !== null && home > thr, 1);
-      // grid: positive → grid feeds battery ; negative → export to grid
-      this._updateFlow(
+      // Vessel (liquid) or compact bar
+      if (this._els.water) this._updateVessel(soc, net, level, statusKey);
+      if (this._els.barFill && soc !== null) {
+        const pct = Math.max(0, Math.min(100, soc));
+        this._els.barFill.style.width = `${pct}%`;
+        this._els.barFill.style.background = `var(--zdc-l-${level})`;
+      }
+
+      // Power readouts strip
+      this._updateStrip("solar", solar, "in");
+      this._updateStrip("home", home, "out");
+      this._updateStrip(
         "grid",
-        grid,
-        grid !== null && Math.abs(grid) > thr,
-        grid !== null && grid < 0 ? -1 : 1
+        grid === null ? null : Math.abs(grid),
+        grid === null ? null : grid > thr ? "in" : grid < -thr ? "out" : null
       );
 
       // Stats
@@ -836,68 +910,83 @@
       });
     }
 
-    /**
-     * A "comet": a short glowing stroke segment that grows out of the source,
-     * races along the wire and gets absorbed at the destination.
-     * Built once per direction; speed is driven by timeScale (no restarts).
-     */
-    _makeCometTl(comet, direction) {
-      const G = window.gsap;
-      const tl = G.timeline({ repeat: -1, paused: true });
-      if (direction === 1) {
-        tl.fromTo(
-          comet,
-          { drawSVG: "0% 0%" },
-          { drawSVG: "0% 32%", duration: 0.32, ease: "power1.in" }
-        )
-          .to(comet, { drawSVG: "68% 100%", duration: 0.56, ease: "none" })
-          .to(comet, { drawSVG: "100% 100%", duration: 0.32, ease: "power1.out" });
-      } else {
-        tl.fromTo(
-          comet,
-          { drawSVG: "100% 100%" },
-          { drawSVG: "68% 100%", duration: 0.32, ease: "power1.in" }
-        )
-          .to(comet, { drawSVG: "0% 32%", duration: 0.56, ease: "none" })
-          .to(comet, { drawSVG: "0% 0%", duration: 0.32, ease: "power1.out" });
-      }
-      return tl;
+    /** Usable capacity in kWh: derived live from the kWh sensor, else config. */
+    _capacityKwh() {
+      const c = this._config;
+      const h = this._hass;
+      const e = num(h, c.energy_entity);
+      const soc = num(h, c.soc_entity);
+      if (e !== null && soc !== null && soc >= 5) return (e * 100) / soc;
+      if (c.capacity > 0) return c.capacity;
+      return null;
     }
 
-    _updateFlow(key, value, active, direction) {
-      const f = this._flow[key];
-      if (!f) return;
-      if (f.val) f.val.textContent = fmtPower(this._hass, value === null ? null : Math.abs(value));
-      if (f.wire) f.wire.classList.toggle("active", !!active);
-      if (!f.comet) return;
+    /** { text, icon } for "full in …" / "runtime …", or null when not applicable. */
+    _computeEta(soc, net, cap, statusKey) {
+      const c = this._config;
+      const h = this._hass;
+      if (soc === null || net === null) return null;
+      const thr = c.flow_threshold;
+      if (statusKey === "charging") {
+        if (soc >= 99.5) return { text: t(h, "full"), icon: "flash" };
+        if (cap === null) return null;
+        const dur = fmtDuration((cap * (100 - soc)) / 100 / (net / 1000));
+        return dur ? { text: `${t(h, "full_in")} ${dur}`, icon: "flash" } : null;
+      }
+      if (statusKey === "discharging") {
+        const floor = Math.max(0, Math.min(soc, c.reserve_soc || 0));
+        if (soc <= floor + 0.5) return { text: t(h, "empty"), icon: "clock" };
+        if (cap === null) return null;
+        const dur = fmtDuration((cap * (soc - floor)) / 100 / (Math.abs(net) / 1000));
+        return dur ? { text: `${t(h, "autonomy")} ${dur}`, icon: "clock" } : null;
+      }
+      return null;
+    }
+
+    _updateVessel(soc, net, level, statusKey) {
+      const e = this._els;
+      // Move the water group so its wave baseline (local y=6) sits at the SoC line:
+      // full (100%) → cell top, empty (0%) → cell bottom.
+      const WAVE_BASE = 6;
+      const pct = soc === null ? 0 : Math.max(0, Math.min(100, soc));
+      const targetY = CELL.bottom - WAVE_BASE - (CELL.height * pct) / 100;
+      e.water.style.setProperty("--water", `var(--zdc-l-${level})`);
 
       if (!this._gsapOK) {
-        // Reduced motion or GSAP unavailable: static dashed wire only
-        f.comet.style.opacity = "0";
+        e.water.setAttribute("transform", `translate(0 ${targetY})`);
         return;
       }
-
-      if (!active) {
-        if (f.tl) f.tl.pause();
-        f.comet.style.opacity = "0";
-        return;
+      const G = window.gsap;
+      if (this._waterY === null) {
+        G.set(e.water, { y: targetY });
+      } else if (Math.abs(this._waterY - targetY) > 0.5) {
+        G.to(e.water, { y: targetY, duration: 1.1, ease: "power2.out" });
       }
+      this._waterY = targetY;
 
-      if (!f.tl || f.dir !== direction) {
-        if (f.tl) f.tl.kill();
-        f.tl = this._makeCometTl(f.comet, direction);
-        f.dir = direction;
-      }
+      // Wave speed reflects throughput; calmer at idle.
+      const flow = Math.abs(net || 0);
+      const speed = Math.max(0.5, Math.min(2.6, 0.5 + flow / 500));
+      if (this._tweens.wave1) this._tweens.wave1.timeScale(speed);
+      if (this._tweens.wave2) this._tweens.wave2.timeScale(speed * 0.8);
 
-      const w = Math.abs(value);
-      // Full traverse time: 0.8s (high power) … 8s (trickle), bucketed to 0.1s
-      const dur = Math.round(Math.max(0.8, Math.min(8, 2500 / Math.max(w, 1))) * 10) / 10;
-      if (dur !== f.lastDur) {
-        f.lastDur = dur;
-        f.tl.timeScale(1.2 / dur); // timeline is 1.2s at timeScale 1
+      // Bubbles only while charging.
+      if (this._tweens.bubbles) {
+        const bubbling = statusKey === "charging";
+        this._els.bubbles.style.opacity = bubbling ? "1" : "0";
+        if (bubbling && this._tweens.bubbles.paused()) this._tweens.bubbles.play();
+        else if (!bubbling && !this._tweens.bubbles.paused()) this._tweens.bubbles.pause();
       }
-      f.comet.style.opacity = "1";
-      if (f.tl.paused()) f.tl.play();
+    }
+
+    _updateStrip(key, value, dir) {
+      const v = this.shadowRoot.getElementById(`rdv-${key}`);
+      if (v) v.textContent = fmtPower(this._hass, value);
+      const a = this.shadowRoot.getElementById(`rda-${key}`);
+      if (a) {
+        a.className = `rd-arrow ${dir ? `a-${dir}` : ""}`;
+        a.innerHTML = dir ? svgIcon(dir === "in" ? "down" : "up") : "";
+      }
     }
 
     /** Localized display label for a select option (raw value is sent to the service). */
@@ -968,6 +1057,10 @@
           --zdc-good:  #0ca30c;
           --zdc-warn:  #fab219;
           --zdc-crit:  #d03b3b;
+          /* Battery level colours (liquid + bar) */
+          --zdc-l-ok:   var(--zendure-battery-color, #12a150);
+          --zdc-l-warn: #eda100;
+          --zdc-l-crit: #e5484d;
           --zdc-track: color-mix(in srgb, currentColor 10%, transparent);
           --zdc-card-bg: var(--ha-card-background, var(--card-background-color, #fff));
         }
@@ -975,6 +1068,9 @@
           --zdc-solar: var(--zendure-solar-color, #c98500);
           --zdc-grid:  var(--zendure-grid-color, #3987e5);
           --zdc-home:  var(--zendure-home-color, #d55181);
+          --zdc-l-ok:   var(--zendure-battery-color, #2bbd6d);
+          --zdc-l-warn: #f5b13a;
+          --zdc-l-crit: #f0595e;
         }
         ha-card { overflow: hidden; }
         .card {
@@ -1014,91 +1110,94 @@
         .empty .ic { width: 36px; height: 36px; opacity: .4; }
         .empty p { margin: 0; font-size: .9rem; max-width: 32ch; }
 
-        /* ---------------- flow ---------------- */
-        .flow { position: relative; aspect-ratio: 400 / 240; }
-        .flow.solo { aspect-ratio: auto; display: flex; justify-content: center; padding: 8px 0; }
-        .wires { position: absolute; inset: 0; width: 100%; height: 100%; }
-        .wire {
-          fill: none; stroke-width: 2; stroke-linecap: round; opacity: .22;
-          transition: opacity .3s;
-        }
-        .wire.active { opacity: .45; }
-        .w-solar { stroke: var(--zdc-solar); }
-        .w-grid  { stroke: var(--zdc-grid); }
-        .w-home  { stroke: var(--zdc-home); }
-        .comet {
-          fill: none; stroke-width: 3.5; stroke-linecap: round;
-          opacity: 0; transition: opacity .25s;
-        }
-        .c-solar { stroke: var(--zdc-solar); }
-        .c-grid  { stroke: var(--zdc-grid); }
-        .c-home  { stroke: var(--zdc-home); }
-
-        .node {
-          position: absolute; display: flex; flex-direction: column;
-          align-items: center; gap: 4px; transform: translate(-50%, -50%);
-          cursor: pointer; border: 0; background: none; padding: 0;
-        }
-        .node:focus-visible, .hero:focus-visible { outline: 2px solid var(--zdc-grid); outline-offset: 2px; border-radius: 12px; }
-        .node .circle {
-          width: 64px; height: 64px; border-radius: 50%;
-          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-          border: 2px solid; background: var(--zdc-card-bg);
-        }
-        .node .val { font-size: .72rem; font-weight: 600; color: var(--primary-text-color); }
-        .node .lbl, .hero .lbl { font-size: .75rem; color: var(--secondary-text-color); }
-        .n-solar { left: 15.5%; top: 21.7%; }
-        .n-solar .circle { border-color: var(--zdc-solar); }
-        .n-solar .ic { color: var(--zdc-solar); }
-        .n-grid { left: 15.5%; top: 78.3%; flex-direction: column-reverse; }
-        .n-grid .circle { border-color: var(--zdc-grid); }
-        .n-grid .ic { color: var(--zdc-grid); }
-        .n-home { left: 84.5%; top: 50%; }
-        .n-home .circle { border-color: var(--zdc-home); }
-        .n-home .ic { color: var(--zdc-home); }
-
+        /* ---------------- hero : battery vessel ---------------- */
         .hero {
-          position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-          display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;
+          display: flex; align-items: center; gap: 20px;
+          padding: 6px 4px 2px; cursor: pointer;
+          border: 0; background: none; text-align: left; width: 100%;
         }
-        .flow.solo .hero { position: static; transform: none; }
-        .ring {
-          width: 118px; height: 118px; border-radius: 50%;
-          background: conic-gradient(var(--zdc-batt) 0%, var(--zdc-track) 0);
-          display: flex; align-items: center; justify-content: center;
-          transition: background .6s;
+        .hero:focus-visible, .rd:focus-visible, .crow:focus-visible, .mini:focus-visible {
+          outline: 2px solid var(--zdc-grid); outline-offset: 3px; border-radius: 14px;
         }
-        .ring-in {
-          width: 100px; height: 100px; border-radius: 50%;
-          background: var(--zdc-card-bg);
-          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+        .zdc-vessel { width: 104px; height: 164px; flex: none; overflow: visible; }
+        .zdc-cap { fill: var(--zdc-track); }
+        .zdc-void { fill: color-mix(in srgb, currentColor 7%, transparent); }
+        .zdc-glass {
+          fill: none; stroke: color-mix(in srgb, currentColor 22%, transparent);
+          stroke-width: 3;
         }
-        .soc { font-size: 1.7rem; font-weight: 700; line-height: 1; display: inline-flex; align-items: baseline; }
-        .soc i { font-style: normal; font-size: .8rem; font-weight: 600; color: var(--secondary-text-color); margin-left: 1px; }
-        .soc.low { color: var(--zdc-crit); }
-        .soc .warn-ic { width: 14px; height: 14px; color: var(--zdc-crit); align-self: center; margin-right: 3px; }
-        .kwh { font-size: .72rem; color: var(--secondary-text-color); }
-        .batt-power {
-          display: inline-flex; align-items: center; gap: 2px;
-          font-size: .72rem; font-weight: 600; min-height: 14px;
+        .zdc-shine { fill: #fff; opacity: .10; }
+        .zdc-water { will-change: transform; }
+        .zdc-fill { fill: var(--water, var(--zdc-l-ok)); transition: fill .5s; }
+        .zdc-wave { fill: var(--water, var(--zdc-l-ok)); transition: fill .5s; }
+        .zdc-wave-1 { opacity: .95; }
+        .zdc-wave-2 { opacity: .5; }
+        .zdc-bubble { fill: #fff; opacity: 0; }
+        .zdc-bubbles { transition: opacity .4s; }
+
+        .hero-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .soc {
+          font-size: 2.9rem; font-weight: 700; line-height: .95;
+          display: inline-flex; align-items: flex-start;
+          font-variant-numeric: tabular-nums; color: var(--primary-text-color);
         }
-        .batt-power .ic { width: 12px; height: 12px; }
-        .bp-in { color: var(--zdc-batt); }
-        .bp-out { color: var(--zdc-home); }
+        .soc i {
+          font-style: normal; font-size: 1.1rem; font-weight: 600;
+          color: var(--secondary-text-color); margin-left: 2px; margin-top: .28em;
+        }
+        .soc.l-warn { color: var(--zdc-l-warn); }
+        .soc.l-crit { color: var(--zdc-l-crit); }
+        .soc .warn-ic { width: 22px; height: 22px; color: var(--zdc-l-crit); align-self: center; margin-right: 5px; }
+        .kwh { font-size: .92rem; font-weight: 600; color: var(--secondary-text-color); font-variant-numeric: tabular-nums; }
+        .eta {
+          display: inline-flex; align-items: center; gap: 5px;
+          font-size: .82rem; font-weight: 500; color: var(--secondary-text-color);
+          min-height: 0; height: 0; opacity: 0; overflow: hidden;
+          transition: opacity .3s, height .3s, margin .3s;
+        }
+        .eta.show { height: 1.4em; opacity: 1; margin-top: 2px; }
+        .eta .ic { width: 15px; height: 15px; color: var(--zdc-batt); }
+
+        /* ---------------- power readouts strip ---------------- */
+        .strip {
+          display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px;
+        }
+        .rd {
+          display: flex; flex-direction: column; gap: 4px; cursor: pointer;
+          border: 0; font: inherit; text-align: left;
+          padding: 9px 11px; border-radius: 12px;
+          background: color-mix(in srgb, currentColor 5%, transparent);
+          color: var(--primary-text-color);
+        }
+        .rd-top { display: inline-flex; align-items: center; gap: 6px; }
+        .rd-top .ic { width: 15px; height: 15px; }
+        .r-solar .ic { color: var(--zdc-solar); }
+        .r-home .ic { color: var(--zdc-home); }
+        .r-grid .ic { color: var(--zdc-grid); }
+        .rd-l { font-size: .72rem; color: var(--secondary-text-color); }
+        .rd-v {
+          display: inline-flex; align-items: center; gap: 3px;
+          font-size: .95rem; font-weight: 700; font-variant-numeric: tabular-nums;
+        }
+        .rd-arrow { display: inline-flex; }
+        .rd-arrow .ic { width: 13px; height: 13px; }
+        .rd-arrow.a-in .ic { color: var(--zdc-l-ok); }
+        .rd-arrow.a-out .ic { color: var(--zdc-home); }
 
         /* ---------------- compact ---------------- */
         .cbody { display: flex; flex-direction: column; gap: 10px; }
-        .crow { display: flex; align-items: center; gap: 12px; cursor: pointer; }
-        .crow .soc { font-size: 1.4rem; }
+        .crow { display: flex; align-items: center; gap: 12px; cursor: pointer; border: 0; background: none; padding: 0; width: 100%; }
+        .crow .soc { font-size: 1.5rem; }
+        .crow .soc i { font-size: .8rem; margin-top: .15em; }
         .bar {
           flex: 1; height: 10px; border-radius: 999px;
           background: var(--zdc-track); overflow: hidden;
         }
-        .bar-fill { height: 100%; border-radius: 999px; background: var(--zdc-batt); width: 0; transition: width .6s, background .6s; }
+        .bar-fill { height: 100%; border-radius: 999px; background: var(--zdc-l-ok); width: 0; transition: width .6s, background .6s; }
         .minis { display: flex; gap: 8px; flex-wrap: wrap; }
         .mini {
           display: inline-flex; align-items: center; gap: 6px;
-          padding: 4px 10px; border-radius: 999px; cursor: pointer;
+          padding: 4px 10px; border-radius: 999px; cursor: pointer; border: 0; font: inherit;
           background: color-mix(in srgb, currentColor 6%, transparent);
           font-size: .78rem; font-weight: 600; color: var(--primary-text-color);
         }
@@ -1169,15 +1268,14 @@
         .tog.on .tog-track { background: var(--zdc-batt); }
         .tog.on .tog-knob { left: 16px; }
 
-        @media (max-width: 380px) {
-          .node .circle { width: 54px; height: 54px; }
-          .ring { width: 100px; height: 100px; }
-          .ring-in { width: 84px; height: 84px; }
-          .soc { font-size: 1.4rem; }
+        @media (max-width: 340px) {
+          .hero { gap: 14px; }
+          .zdc-vessel { width: 84px; height: 132px; }
+          .soc { font-size: 2.3rem; }
+          .rd-l { display: none; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .comet { display: none !important; }
-          .wire.active { opacity: .8; stroke-dasharray: 4 6; }
+          .zdc-bubbles { display: none !important; }
         }
       `;
     }
@@ -1251,6 +1349,10 @@
               name: "low_soc",
               selector: { number: { min: 5, max: 50, step: 5, mode: "slider", unit_of_measurement: "%" } },
             },
+            {
+              name: "capacity",
+              selector: { number: { min: 0, max: 100, step: 0.1, mode: "box", unit_of_measurement: "kWh" } },
+            },
           ],
         },
         {
@@ -1306,6 +1408,7 @@
         show_controls: t(h, "ed_show_controls"),
         compact: t(h, "ed_compact"),
         low_soc: t(h, "ed_low_soc"),
+        capacity: t(h, "ed_capacity"),
         stats_entities: t(h, "ed_stats_entities"),
         mode_entity: t(h, "ed_mode"),
         select_entities: t(h, "ed_selects"),
@@ -1321,6 +1424,7 @@
         soc_entity: t(h, "ed_soc_helper"),
         charge_entity: t(h, "ed_charge_helper"),
         discharge_entity: t(h, "ed_discharge_helper"),
+        capacity: t(h, "ed_capacity_helper"),
       };
     }
 

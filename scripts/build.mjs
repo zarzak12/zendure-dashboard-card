@@ -18,7 +18,7 @@ const banner = `/*!
  * Zendure Dashboard Card v${version}
  * https://github.com/zarzak12/zendure-dashboard-card — MIT License
  *
- * Bundles GSAP ${(read("vendor/gsap.min.js").match(/gsap[^\d]*(\d+\.\d+\.\d+)/) || [])[1] || "3.13.x"} + DrawSVGPlugin
+ * Bundles GSAP ${(read("vendor/gsap.min.js").match(/gsap[^\d]*(\d+\.\d+\.\d+)/) || [])[1] || "3.13.x"}
  * (c) Webflow, Inc. — https://gsap.com/community/standard-license/
  */
 `;
@@ -31,18 +31,14 @@ const banner = `/*!
  *   TypeError: Cannot set property window of #<Window> which has only a getter
  * Fix: shadow `self` with a plain writable object whose `window` points to
  * the real window — the UMD assigns onto that object, then hands the real
- * window to the factory, so gsap/DrawSVGPlugin still land on window.*.
+ * window to the factory, so gsap still lands on window.gsap.
  */
 const wrapVendor = (code) => `;(function (self) {
 ${code}
 }).call(undefined, typeof window !== "undefined" ? { window: window } : { window: globalThis });
 `;
 
-const out =
-  banner +
-  wrapVendor(read("vendor/gsap.min.js")) +
-  wrapVendor(read("vendor/DrawSVGPlugin.min.js")) +
-  cardSource;
+const out = banner + wrapVendor(read("vendor/gsap.min.js")) + cardSource;
 
 mkdirSync(join(root, "dist"), { recursive: true });
 writeFileSync(join(root, "dist/zendure-dashboard-card.js"), out);

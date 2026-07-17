@@ -41,7 +41,6 @@ try {
 /* ---- assertions ---- */
 const checks = [
   ["window.gsap is defined", !!globalThis.gsap],
-  ["window.DrawSVGPlugin is defined", !!globalThis.DrawSVGPlugin],
   ["custom element zendure-dashboard-card registered", registry.has("zendure-dashboard-card")],
   ["custom element zendure-dashboard-card-editor registered", registry.has("zendure-dashboard-card-editor")],
   [
