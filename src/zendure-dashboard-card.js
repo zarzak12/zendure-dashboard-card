@@ -8,7 +8,7 @@
 (() => {
   "use strict";
 
-  const CARD_VERSION = "1.3.0";
+  const CARD_VERSION = "1.3.1";
   const CARD_TAG = "zendure-dashboard-card";
   const EDITOR_TAG = "zendure-dashboard-card-editor";
 
@@ -283,18 +283,22 @@
    * floorY. The pattern repeats every `period`, and we overshoot both edges, so
    * translating the whole path by one period in X loops seamlessly.
    */
-  function wavePath(amp, { startX = -28, endX = 134, period = 46, baseY = 6, floorY = 70 } = {}) {
-    const half = period / 2;
-    let d = `M ${startX} ${baseY}`;
-    let x = startX;
-    let up = true;
-    while (x < endX) {
-      const nx = x + half;
-      d += ` Q ${x + half / 2} ${baseY + (up ? -amp : amp)} ${nx} ${baseY}`;
-      x = nx;
-      up = !up;
-    }
-    return `${d} L ${x} ${floorY} L ${startX} ${floorY} Z`;
+  /* Horizontal loop distance (px). Each wave sums 3 sines whose wavelengths all
+   * divide this, so the pattern tiles seamlessly when translated by one unit. */
+  const WAVE_UNIT = 60;
+
+  function wavePath(amp, { phase = 0, startX = -64, endX = 200, baseY = 6, floorY = 72 } = {}) {
+    // Superposed sines of different wavelengths → irregular, ocean-like crest.
+    const comps = [
+      { L: WAVE_UNIT, a: amp, p: phase },
+      { L: WAVE_UNIT / 2, a: amp * 0.52, p: phase * 1.7 + 1.3 },
+      { L: WAVE_UNIT / 3, a: amp * 0.3, p: phase * 2.3 + 2.9 },
+    ];
+    const yAt = (x) =>
+      baseY + comps.reduce((s, c) => s + c.a * Math.sin((x / c.L) * 2 * Math.PI + c.p), 0);
+    let d = `M ${startX} ${yAt(startX).toFixed(2)}`;
+    for (let x = startX + 3; x <= endX; x += 3) d += ` L ${x} ${yAt(x).toFixed(2)}`;
+    return `${d} L ${endX} ${floorY} L ${startX} ${floorY} Z`;
   }
 
   /* Vessel geometry (viewBox 0 0 132 208) — interior cell the water fills. */
@@ -605,8 +609,9 @@
       const clip = `zdc-cell-${uid}`;
       // Two parallax wave crests + a solid body that fills down past the cell.
       const waves = `
-        <path class="zdc-wave zdc-wave-2" d="${wavePath(3.4)}"/>
-        <path class="zdc-wave zdc-wave-1" d="${wavePath(5.2)}"/>`;
+        <path class="zdc-wave zdc-wave-3" d="${wavePath(2.6, { phase: 4.2 })}"/>
+        <path class="zdc-wave zdc-wave-2" d="${wavePath(3.6, { phase: 2.1 })}"/>
+        <path class="zdc-wave zdc-wave-1" d="${wavePath(5.0, { phase: 0 })}"/>`;
       const body = `<rect class="zdc-fill" x="-30" y="6" width="196" height="320"/>`;
       const bubbles = Array.from({ length: 6 }, (_, i) => {
         const cx = 30 + ((i * 79) % 74);
@@ -643,6 +648,7 @@
           ${this._vesselSvg()}
           <div class="hero-info">
             <div class="soc" id="soc">—</div>
+            <div class="batt-power" id="batt-power"></div>
             <div class="kwh" id="kwh"></div>
             <div class="eta" id="eta"></div>
           </div>
@@ -854,6 +860,7 @@
         status: $("#status"),
         statusTxt: $("#status .pill-txt"),
         soc: $("#soc"),
+        battPower: $("#batt-power"),
         kwh: $("#kwh"),
         eta: $("#eta"),
         barFill: $("#bar-fill"),
@@ -891,17 +898,20 @@
       const G = window.gsap;
       const e = this._els;
       if (!e.water || !e.waves.length) return;
-      const period = 46;
 
-      // Parallax: two crests drift at different speeds; timeScale set by power.
-      this._tweens.wave1 = G.to(e.waves[e.waves.length - 1], {
-        x: -period, duration: 2.4, ease: "none", repeat: -1,
-      });
-      if (e.waves.length > 1) {
-        this._tweens.wave2 = G.to(e.waves[0], {
-          x: -period, duration: 3.6, ease: "none", repeat: -1,
+      // Parallax: each crest layer drifts at its own speed (timeScale set by power).
+      const speeds = [4.0, 3.0, 2.2]; // waves[0]=back … last=front
+      this._tweens.waveArr = [];
+      e.waves.forEach((w, i) => {
+        const tw = G.to(w, {
+          x: -WAVE_UNIT,
+          duration: speeds[i] != null ? speeds[i] : 3,
+          ease: "none",
+          repeat: -1,
         });
-      }
+        this._tweens[`wave${i}`] = tw;
+        this._tweens.waveArr.push(tw);
+      });
 
       // Bubbles rise through the water (local coords: y=0 is the surface).
       const bubbles = e.bubbles ? e.bubbles.querySelectorAll(".zdc-bubble") : [];
@@ -1184,6 +1194,18 @@
         this._els.soc.className = `soc l-${level}`;
       }
 
+      // Live battery power next to the vessel (+ charging / − discharging)
+      if (this._els.battPower) {
+        if (net !== null && Math.abs(net) > thr) {
+          const up = net > 0;
+          this._els.battPower.innerHTML = `${svgIcon(up ? "down" : "up")}<span>${fmtPower(h, Math.abs(net))}</span>`;
+          this._els.battPower.className = `batt-power show ${up ? "bp-in" : "bp-out"}`;
+        } else {
+          this._els.battPower.innerHTML = "";
+          this._els.battPower.className = "batt-power";
+        }
+      }
+
       // Stored energy (measured, or estimated from capacity)
       const cap = this._capacityKwh();
       if (this._els.kwh) {
@@ -1426,9 +1448,8 @@
 
       // Wave speed reflects throughput; calmer at idle.
       const flow = Math.abs(net || 0);
-      const speed = Math.max(0.5, Math.min(2.6, 0.5 + flow / 500));
-      if (this._tweens.wave1) this._tweens.wave1.timeScale(speed);
-      if (this._tweens.wave2) this._tweens.wave2.timeScale(speed * 0.8);
+      const speed = Math.max(0.45, Math.min(2.6, 0.45 + flow / 500));
+      (this._tweens.waveArr || []).forEach((tw, i) => tw.timeScale(speed * (1 - i * 0.14)));
 
       // Bubbles only while charging.
       if (this._tweens.bubbles) {
@@ -1658,7 +1679,8 @@
         .zdc-fill { fill: var(--water, var(--zdc-l-ok)); transition: fill .5s; }
         .zdc-wave { fill: var(--water, var(--zdc-l-ok)); transition: fill .5s; }
         .zdc-wave-1 { opacity: .95; }
-        .zdc-wave-2 { opacity: .5; }
+        .zdc-wave-2 { opacity: .55; }
+        .zdc-wave-3 { opacity: .32; }
         .zdc-bubble { fill: #fff; opacity: 0; }
         .zdc-bubbles { transition: opacity .4s; }
 
@@ -1675,6 +1697,15 @@
         .soc.l-warn { color: var(--zdc-l-warn); }
         .soc.l-crit { color: var(--zdc-l-crit); }
         .soc .warn-ic { width: 22px; height: 22px; color: var(--zdc-l-crit); align-self: center; margin-right: 5px; }
+        .batt-power {
+          display: none; align-items: center; gap: 4px;
+          font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums;
+          margin-top: 2px;
+        }
+        .batt-power.show { display: inline-flex; }
+        .batt-power .ic { width: 16px; height: 16px; }
+        .batt-power.bp-in { color: var(--zdc-l-ok); }
+        .batt-power.bp-out { color: var(--zdc-home); }
         .kwh { font-size: .92rem; font-weight: 600; color: var(--secondary-text-color); font-variant-numeric: tabular-nums; }
         .eta {
           display: inline-flex; align-items: center; gap: 5px;

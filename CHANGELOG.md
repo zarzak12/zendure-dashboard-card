@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1 — 2026-07-17
+
+- Live **battery power** (charge/discharge W with arrow) shown next to the vessel
+- **Ocean-like waves**: each crest sums three sine components of different
+  wavelengths for an irregular, natural surface (three parallax layers)
+
 ## 1.3.0 — 2026-07-17
 
 Priority-1 feature pack — turns the card into a real battery remote:
