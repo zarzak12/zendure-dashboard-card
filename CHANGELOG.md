@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 — 2026-07-17
+
+- Cleaner chip/switch labels: strip the device name, card title and the Zendure
+  integration's "… zendure - " prefix (e.g. "SolarFlow 2400 AC zendure - charge
+  journalière" → "Charge journalière")
+
 ## 1.2.0 — 2026-07-17
 
 - **Battery details grid** — new tiles for available energy, total capacity,

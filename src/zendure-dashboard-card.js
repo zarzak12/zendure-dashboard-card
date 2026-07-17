@@ -8,7 +8,7 @@
 (() => {
   "use strict";
 
-  const CARD_VERSION = "1.2.0";
+  const CARD_VERSION = "1.2.1";
   const CARD_TAG = "zendure-dashboard-card";
   const EDITOR_TAG = "zendure-dashboard-card-editor";
 
@@ -948,10 +948,7 @@
         el.textContent = fmtState(h, el.dataset.val);
       });
       this.shadowRoot.querySelectorAll("[data-name]").forEach((el) => {
-        const st = h.states[el.dataset.name];
-        let label = st ? st.attributes.friendly_name || el.dataset.name : el.dataset.name;
-        if (c.name && label.startsWith(c.name)) label = label.slice(c.name.length).trim();
-        el.textContent = label;
+        el.textContent = this._cleanLabel(el.dataset.name);
       });
 
       // Mode segmented controls
@@ -1095,6 +1092,35 @@
             : null;
         set("efficiency", eff === null ? "—" : `${eff}<i>%</i>`);
       }
+    }
+
+    /**
+     * Short, human label for a chip/switch: the entity's friendly name minus the
+     * device name, the card title, and the Zendure integration's "… zendure - " prefix.
+     */
+    _cleanLabel(eid) {
+      const h = this._hass;
+      const st = h.states[eid];
+      const original = (st && st.attributes.friendly_name) || eid;
+      let label = original;
+      // Strip the owning device's name ("SolarFlow 2400 AC …")
+      try {
+        const reg = h.entities && h.entities[eid];
+        const dev = reg && h.devices && h.devices[reg.device_id];
+        if (dev && dev.name && label.toLowerCase().startsWith(dev.name.toLowerCase())) {
+          label = label.slice(dev.name.length);
+        }
+      } catch (_e) {
+        /* registry unavailable */
+      }
+      // Strip the card title if it leads the label
+      const cn = this._config.name;
+      if (cn && label.toLowerCase().startsWith(cn.toLowerCase())) label = label.slice(cn.length);
+      // Zendure integration heuristic: "… zendure - charge journalière" → "charge journalière"
+      label = label.replace(/^.*?\bzendure\b\s*[-–—:]\s*/i, "");
+      label = label.replace(/^[\s\-–—:·]+/, "").trim();
+      if (!label) label = original;
+      return label.charAt(0).toUpperCase() + label.slice(1);
     }
 
     /** Localized display label for a select option (raw value is sent to the service). */
