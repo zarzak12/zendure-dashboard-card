@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.0 — 2026-07-17
+
+Priority-1 feature pack — turns the card into a real battery remote:
+
+- **Manual power control** — a bipolar slider bounded by the real limits
+  (`charge_max_entity` / `discharge_max_entity`) plus Charge / Pause / Discharge
+  buttons; shown only in manual mode (`manual_power_entity`, `manual_mode_value`,
+  `invert_manual`)
+- **Reserve & ceiling SoC** — `min_soc_entity` / `max_soc_entity` sliders with
+  dashed markers drawn on the vessel
+- **Per-pack breakdown** — `pack_entities`: a mini-gauge per stacked pack
+- **Smart alerts banner** — low battery, device offline (`connectivity_entity`),
+  high temperature (`alert_temp_max`), charging below 0 °C, fault (`fault_entity`)
+- **24 h battery-level graph** — SoC sparkline via Home Assistant's history API
+- Toggles: `show_alerts`, `show_history`
+
 ## 1.2.1 — 2026-07-17
 
 - Cleaner chip/switch labels: strip the device name, card title and the Zendure

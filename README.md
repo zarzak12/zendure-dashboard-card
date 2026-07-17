@@ -14,6 +14,11 @@ A modern, fully configurable Lovelace card to **monitor and control your Zendure
 - 🌊 **Living battery vessel** — a glass cell fills with animated liquid to the exact state of charge; waves speed up with power throughput, bubbles rise while charging, colour shifts green → amber → red as it drains
 - ⏱️ **Smart projection** — "Full in 2 h 15" / "Runtime 5 h 30", computed from net power and capacity (something no native HA card shows)
 - 🩺 **Battery details** — available energy, total capacity, **state of health**, **cycle count** and round-trip **efficiency**, computed from your sensors
+- 🎚️ **Manual power remote** — a ±max slider (bounded by your real charge/discharge limits) + Charge / Pause / Discharge buttons, shown in manual mode
+- 🧱 **Per-pack breakdown** — a mini-gauge for every stacked battery pack
+- 🔔 **Smart alerts** — low battery, offline, high temperature, charging below 0 °C, fault
+- 📉 **24 h graph** — battery-level history sparkline
+- 🎯 **Reserve & ceiling** — Min/Max SoC sliders with markers on the vessel
 - 📈 **Clean power readouts** — solar / home / grid values with direction arrows (no redundant flow diagram — HA's energy card already does that)
 - 📊 **Statistics chips** — temperature + any extra sensors you pick
 - 🎛️ **Built-in controls** — operation mode, charge/discharge limits, switches (no extra cards needed)
@@ -93,6 +98,19 @@ switch_entities:
 | `capacity` | number | — | Manual capacity (kWh) fallback when no capacity sensor exists |
 | `reserve_soc` | number | `0` | Floor (%) used as "empty" for the runtime estimate |
 | `show_details` | bool | `true` | Show the battery details grid (available / capacity / health / cycles / efficiency) |
+| `manual_power_entity` | entity | — | `number` entity for manual power (± W) — shows the manual remote |
+| `charge_max_entity` | entity | — | Sensor giving the max charge power (upper bound of the manual slider) |
+| `discharge_max_entity` | entity | — | Sensor giving the max output power (lower bound of the manual slider) |
+| `manual_mode_value` | string | `manual` | The manual remote shows only when the mode entity equals this value |
+| `invert_manual` | bool | `false` | Flip the manual power sign if your device treats positive as discharge |
+| `min_soc_entity` | entity | — | `number` reserve SoC — slider + red marker on the vessel |
+| `max_soc_entity` | entity | — | `number` max SoC — slider + green marker on the vessel |
+| `pack_entities` | list | `[]` | One battery-level sensor per stacked pack — shown as mini-gauges |
+| `connectivity_entity` | entity | — | Online/offline entity for the offline alert |
+| `fault_entity` | entity | — | Fault entity (on = problem) for the fault alert |
+| `alert_temp_max` | number | `50` | High-temperature alert threshold (°C) |
+| `show_alerts` | bool | `true` | Show the alerts banner |
+| `show_history` | bool | `true` | Show the 24 h battery-level graph |
 | `temp_entity` | entity | — | Temperature chip in the statistics row |
 | `mode_entity` | entity | — | `select` entity rendered as segmented buttons |
 | `select_entities` | list | `[]` | Extra `select` entities rendered as segmented buttons (e.g. AC charge/discharge mode). Known option values (`input`, `output`, `smart`, `manual`, `off`) are translated automatically |
@@ -150,6 +168,11 @@ Une carte Lovelace moderne et entièrement paramétrable pour **surveiller et pi
 - 🌊 **Batterie-réservoir vivante** — une cuve en verre se remplit d'un liquide animé au niveau exact du SoC ; les vagues accélèrent avec la puissance, des bulles montent pendant la charge, la couleur passe vert → ambre → rouge en se vidant
 - ⏱️ **Projection intelligente** — « Pleine dans 2 h 15 » / « Autonomie 5 h 30 », calculée depuis la puissance nette et la capacité (ce qu'aucune carte HA native n'affiche)
 - 🩺 **Détails batterie** — énergie disponible, capacité totale, **état de santé**, **nombre de cycles** et **rendement**, calculés depuis vos capteurs
+- 🎚️ **Télécommande manuelle** — un curseur ±max (borné par vos limites réelles de charge/décharge) + boutons Charge / Pause / Décharge, en mode manuel
+- 🧱 **Détail par pack** — une mini-jauge pour chaque batterie empilée
+- 🔔 **Alertes intelligentes** — batterie faible, hors-ligne, température élevée, charge sous 0 °C, défaut
+- 📉 **Graphe 24 h** — courbe du niveau de batterie
+- 🎯 **Réserve & plafond** — curseurs SoC min/max avec repères sur la cuve
 - 📈 **Puissances épurées** — solaire / maison / réseau avec flèches de sens (pas de diagramme de flux redondant — la carte énergie de HA le fait déjà)
 - 📊 **Puces de statistiques** — température + tous les capteurs de votre choix
 - 🎛️ **Contrôles intégrés** — mode de fonctionnement, limites de charge/décharge, interrupteurs

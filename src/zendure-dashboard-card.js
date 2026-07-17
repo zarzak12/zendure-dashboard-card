@@ -8,7 +8,7 @@
 (() => {
   "use strict";
 
-  const CARD_VERSION = "1.2.1";
+  const CARD_VERSION = "1.3.0";
   const CARD_TAG = "zendure-dashboard-card";
   const EDITOR_TAG = "zendure-dashboard-card-editor";
 
@@ -44,6 +44,20 @@
       mode: "Mode",
       charge_limit: "Max. charge power",
       discharge_limit: "Max. output power",
+      manual_power: "Manual power",
+      force_charge: "Charge",
+      force_discharge: "Discharge",
+      pause: "Pause",
+      soc_min: "Reserve",
+      soc_max: "Ceiling",
+      packs: "Battery packs",
+      pack: "Pack",
+      history_24h: "Last 24 h",
+      alert_low: "Low battery",
+      alert_offline: "Device offline",
+      alert_hot: "High temperature",
+      alert_cold: "Charging below 0 °C",
+      alert_fault: "Fault reported",
       not_configured: "Open the card editor to select your Zendure device.",
       // Known select option values (display only — raw value is sent to the service)
       opt_input: "Charge",
@@ -77,6 +91,22 @@
       ed_discharge_total: "Lifetime discharged (kWh)",
       ed_discharge_total_helper: "Cumulative discharged energy — enables the cycle count (÷ capacity) and efficiency.",
       ed_show_details: "Battery details (available, health, cycles…)",
+      ed_sec_advanced: "Manual control & alerts",
+      ed_manual_power: "Manual power (number)",
+      ed_charge_max: "Max charge power sensor",
+      ed_discharge_max: "Max output power sensor",
+      ed_manual_mode_value: "Value of the manual mode",
+      ed_manual_mode_helper: "The manual power slider shows only when the mode entity equals this value.",
+      ed_invert_manual: "Invert manual power sign",
+      ed_min_soc_entity: "Reserve SoC (number)",
+      ed_max_soc_entity: "Max SoC (number)",
+      ed_pack_entities: "Per-pack SoC sensors",
+      ed_pack_helper: "One battery-level sensor per stacked pack — shown as mini gauges.",
+      ed_show_alerts: "Alerts banner",
+      ed_alert_temp_max: "High-temperature alert (°C)",
+      ed_connectivity_entity: "Connectivity entity (online/offline)",
+      ed_fault_entity: "Fault entity (on = problem)",
+      ed_show_history: "24 h battery-level graph",
       ed_temp: "Temperature",
       ed_show_flow: "Power readouts (solar / home / grid)",
       ed_show_stats: "Statistics row",
@@ -119,6 +149,20 @@
       mode: "Mode",
       charge_limit: "Puissance de charge max.",
       discharge_limit: "Puissance de sortie max.",
+      manual_power: "Puissance manuelle",
+      force_charge: "Charge",
+      force_discharge: "Décharge",
+      pause: "Pause",
+      soc_min: "Réserve",
+      soc_max: "Plafond",
+      packs: "Modules batterie",
+      pack: "Pack",
+      history_24h: "Dernières 24 h",
+      alert_low: "Batterie faible",
+      alert_offline: "Appareil hors-ligne",
+      alert_hot: "Température élevée",
+      alert_cold: "Charge sous 0 °C",
+      alert_fault: "Défaut signalé",
       not_configured: "Ouvrez l'éditeur de la carte pour sélectionner votre appareil Zendure.",
       // Valeurs d'options connues (affichage uniquement — la valeur brute est envoyée au service)
       opt_input: "Charge",
@@ -152,6 +196,22 @@
       ed_discharge_total: "Décharge cumulée (kWh)",
       ed_discharge_total_helper: "Énergie déchargée cumulée — active le nombre de cycles (÷ capacité) et le rendement.",
       ed_show_details: "Détails batterie (disponible, santé, cycles…)",
+      ed_sec_advanced: "Pilotage manuel & alertes",
+      ed_manual_power: "Puissance manuelle (number)",
+      ed_charge_max: "Capteur puissance de charge max",
+      ed_discharge_max: "Capteur puissance de sortie max",
+      ed_manual_mode_value: "Valeur du mode manuel",
+      ed_manual_mode_helper: "Le curseur de puissance manuelle n'apparaît que quand le mode vaut cette valeur.",
+      ed_invert_manual: "Inverser le signe de la puissance",
+      ed_min_soc_entity: "SoC de réserve (number)",
+      ed_max_soc_entity: "SoC maximum (number)",
+      ed_pack_entities: "Capteurs SoC par pack",
+      ed_pack_helper: "Un capteur de niveau par pack empilé — affiché en mini-jauges.",
+      ed_show_alerts: "Bandeau d'alertes",
+      ed_alert_temp_max: "Alerte température haute (°C)",
+      ed_connectivity_entity: "Entité de connectivité (en ligne/hors-ligne)",
+      ed_fault_entity: "Entité de défaut (on = problème)",
+      ed_show_history: "Graphe de niveau 24 h",
       ed_temp: "Température",
       ed_show_flow: "Puissances (solaire / maison / réseau)",
       ed_show_stats: "Ligne de statistiques",
@@ -379,12 +439,24 @@
     select_entities: [],
     charge_limit_entity: "",
     discharge_limit_entity: "",
+    manual_power_entity: "",
+    charge_max_entity: "",
+    discharge_max_entity: "",
+    manual_mode_value: "manual",
+    invert_manual: false,
+    min_soc_entity: "",
+    max_soc_entity: "",
+    pack_entities: [],
+    connectivity_entity: "",
+    fault_entity: "",
     stats_entities: [],
     switch_entities: [],
     show_flow: true,
     show_stats: true,
     show_details: true,
     show_controls: true,
+    show_alerts: true,
+    show_history: true,
     compact: false,
     invert_battery: false,
     low_soc: 15,
@@ -392,6 +464,8 @@
     capacity: 0,
     nominal_capacity: 0,
     reserve_soc: 0,
+    alert_temp_max: 50,
+    history_hours: 24,
   };
 
   /* ------------------------------------------------------------------ *
@@ -458,7 +532,10 @@
         c.charge_entity, c.discharge_entity, c.energy_entity, c.temp_entity,
         c.capacity_entity, c.charge_total_entity, c.discharge_total_entity,
         c.mode_entity, c.charge_limit_entity, c.discharge_limit_entity,
+        c.manual_power_entity, c.charge_max_entity, c.discharge_max_entity,
+        c.min_soc_entity, c.max_soc_entity, c.connectivity_entity, c.fault_entity,
         ...(c.select_entities || []),
+        ...(c.pack_entities || []),
         ...(c.stats_entities || []),
         ...(c.switch_entities || []),
       ].filter(Boolean);
@@ -487,6 +564,7 @@
         <ha-card>
           <div class="card ${c.compact ? "compact" : ""}">
             ${this._headerHtml()}
+            ${configured && c.show_alerts ? `<div class="alerts" id="alerts"></div>` : ""}
             ${
               !configured
                 ? `<div class="empty">${svgIcon("battery")}<p>${t(h, "not_configured")}</p></div>`
@@ -494,7 +572,9 @@
                   ? this._compactHtml()
                   : this._heroHtml() + (hasStrip ? this._stripHtml() : "")
             }
+            ${configured && !c.compact && c.show_history && c.soc_entity ? this._historyHtml() : ""}
             ${configured && !c.compact && c.show_details ? this._detailsHtml() : ""}
+            ${configured && !c.compact && (c.pack_entities || []).length ? this._packsHtml() : ""}
             ${configured && !c.compact && c.show_stats ? this._statsHtml() : ""}
             ${configured && !c.compact && c.show_controls ? this._controlsHtml() : ""}
           </div>
@@ -506,6 +586,7 @@
       this._built = true;
       this._lastStates = {};
       this._update();
+      this._startHistory();
     }
 
     _headerHtml() {
@@ -548,6 +629,7 @@
               ${waves}
             </g>
           </g>
+          <g class="zdc-marks" id="zdc-marks"></g>
           <rect class="zdc-glass" x="6" y="12" width="120" height="192" rx="20"/>
           <rect class="zdc-shine" x="20" y="26" width="14" height="150" rx="7"/>
         </svg>`;
@@ -615,6 +697,43 @@
       return `<section class="details">${tiles.join("")}</section>`;
     }
 
+    _historyHtml() {
+      const h = this._hass;
+      return `
+        <section class="history">
+          <div class="hist-head">
+            <span>${t(h, "history_24h")}</span>
+            <span class="hist-now" id="hist-now"></span>
+          </div>
+          <svg class="hist-svg" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true">
+            <path class="hist-area" id="hist-area"/>
+            <path class="hist-line" id="hist-line"/>
+          </svg>
+        </section>`;
+    }
+
+    _packsHtml() {
+      const c = this._config;
+      const h = this._hass;
+      const packs = (c.pack_entities || [])
+        .map((eid, i) => {
+          return `
+          <div class="pack" data-more="${eid}" role="button" tabindex="0">
+            <div class="pack-head">
+              <span class="pack-n">${t(h, "pack")} ${i + 1}</span>
+              <span class="pack-v" id="pkv-${i}">—</span>
+            </div>
+            <div class="pack-bar"><div class="pack-fill" id="pkf-${i}"></div></div>
+          </div>`;
+        })
+        .join("");
+      return `
+        <section class="packs">
+          <div class="sec-title">${t(h, "packs")}</div>
+          <div class="pack-grid">${packs}</div>
+        </section>`;
+    }
+
     _compactHtml() {
       const c = this._config;
       const h = this._hass;
@@ -651,10 +770,30 @@
       return `<section class="stats">${chips.join("")}</section>`;
     }
 
+    _manualHtml() {
+      const h = this._hass;
+      return `
+        <div class="ctl mctl" id="manual-ctl">
+          <span class="ctl-l">${t(h, "manual_power")}<b class="ctl-v" id="sv-manual">—</b></span>
+          <input type="range" id="sl-manual" data-kind="manual"
+            min="-100" max="100" step="10" value="0">
+          <div class="mbtns">
+            <button class="mbtn m-dis" data-manual="discharge">${svgIcon("up")}${t(h, "force_discharge")}</button>
+            <button class="mbtn m-pause" data-manual="pause">${t(h, "pause")}</button>
+            <button class="mbtn m-cha" data-manual="charge">${svgIcon("down")}${t(h, "force_charge")}</button>
+          </div>
+        </div>`;
+    }
+
     _controlsHtml() {
       const c = this._config;
       const h = this._hass;
       const parts = [];
+
+      // Manual power (visibility toggled by mode in _update)
+      if (c.manual_power_entity && h.states[c.manual_power_entity]) {
+        parts.push(this._manualHtml());
+      }
 
       // Mode selectors: primary mode_entity + any extra select entities
       const selects = [];
@@ -664,12 +803,7 @@
       pushSelect(c.mode_entity);
       (c.select_entities || []).forEach(pushSelect);
       for (const eid of selects) {
-        const st = h.states[eid];
-        let label =
-          eid === c.mode_entity
-            ? t(h, "mode")
-            : st.attributes.friendly_name || eid;
-        if (c.name && label.startsWith(c.name)) label = label.slice(c.name.length).trim();
+        const label = eid === c.mode_entity ? t(h, "mode") : this._cleanLabel(eid);
         parts.push(`
           <div class="ctl">
             <span class="ctl-l">${label}</span>
@@ -693,6 +827,10 @@
         parts.push(slider("charge", c.charge_limit_entity, t(h, "charge_limit")));
       if (c.discharge_limit_entity)
         parts.push(slider("discharge", c.discharge_limit_entity, t(h, "discharge_limit")));
+      if (c.min_soc_entity)
+        parts.push(slider("minsoc", c.min_soc_entity, t(h, "soc_min")));
+      if (c.max_soc_entity)
+        parts.push(slider("maxsoc", c.max_soc_entity, t(h, "soc_max")));
 
       if ((c.switch_entities || []).length) {
         const sw = c.switch_entities
@@ -723,6 +861,12 @@
         water: $("#zdc-water"),
         bubbles: $("#zdc-bubbles"),
         waves: this.shadowRoot.querySelectorAll(".zdc-wave"),
+        marks: $("#zdc-marks"),
+        alerts: $("#alerts"),
+        histArea: $("#hist-area"),
+        histLine: $("#hist-line"),
+        histNow: $("#hist-now"),
+        manualCtl: $("#manual-ctl"),
       };
       this._killTweens();
       this._waterY = null;
@@ -788,6 +932,7 @@
 
     disconnectedCallback() {
       this._killTweens();
+      this._stopHistory();
       this._built = false;
     }
 
@@ -811,7 +956,8 @@
         chip.addEventListener("click", () => moreInfo(this, chip.dataset.entity));
       });
 
-      root.querySelectorAll("input[type=range]").forEach((sl) => {
+      // Plain number sliders (limits, reserve/ceiling). Manual power is handled apart.
+      root.querySelectorAll("input[type=range]:not([data-kind=manual])").forEach((sl) => {
         const eid = sl.dataset.entity;
         const label = sl.closest(".ctl").querySelector(".ctl-v");
         sl.addEventListener("input", () => {
@@ -827,6 +973,28 @@
         });
       });
 
+      // Manual power: slider value is in "net" space (+ charge / − discharge).
+      const man = root.getElementById("sl-manual");
+      if (man) {
+        const eid = this._config.manual_power_entity;
+        man.addEventListener("input", () => {
+          this._sliderDrag[eid] = true;
+          this._setManualLabel(Number(man.value));
+        });
+        man.addEventListener("change", () => {
+          delete this._sliderDrag[eid];
+          this._setManualPower(Number(man.value));
+        });
+        root.querySelectorAll(".mbtn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const kind = btn.dataset.manual;
+            const b = this._manualBounds();
+            const net = kind === "charge" ? b.max : kind === "discharge" ? b.min : 0;
+            this._setManualPower(net);
+          });
+        });
+      }
+
       root.querySelectorAll(".tog").forEach((btn) => {
         btn.addEventListener("click", () => {
           this._hass.callService("homeassistant", "toggle", {
@@ -834,6 +1002,119 @@
           });
         });
       });
+    }
+
+    /** Manual power slider bounds in net space: [−dischargeMax, +chargeMax]. */
+    _manualBounds() {
+      const c = this._config;
+      const h = this._hass;
+      const st = h.states[c.manual_power_entity];
+      const emax = st ? Number(st.attributes.max ?? 1200) : 1200;
+      const emin = st ? Number(st.attributes.min ?? -1200) : -1200;
+      const chargeMax = num(h, c.charge_max_entity);
+      const dischargeMax = num(h, c.discharge_max_entity);
+      const max = chargeMax !== null && chargeMax > 0 ? chargeMax : Math.abs(emax);
+      const min = dischargeMax !== null && dischargeMax > 0 ? -dischargeMax : -Math.abs(emin);
+      return { min: Math.round(min), max: Math.round(max) };
+    }
+
+    _setManualLabel(net) {
+      const el = this.shadowRoot.getElementById("sv-manual");
+      if (!el) return;
+      const lang = langOf(this._hass) === "fr" ? "fr-FR" : "en-US";
+      const w = new Intl.NumberFormat(lang, { maximumFractionDigits: 0 }).format(Math.abs(net));
+      const dir = net > 0 ? t(this._hass, "force_charge") : net < 0 ? t(this._hass, "force_discharge") : t(this._hass, "pause");
+      el.textContent = net === 0 ? `${dir} · 0 W` : `${dir} · ${w} W`;
+      el.className = `ctl-v ${net > 0 ? "mv-cha" : net < 0 ? "mv-dis" : ""}`;
+    }
+
+    _setManualPower(net) {
+      const c = this._config;
+      const raw = c.invert_manual ? -net : net;
+      this._hass.callService("number", "set_value", {
+        entity_id: c.manual_power_entity,
+        value: raw,
+      });
+    }
+
+    /* ------------------------------ history ------------------------------ */
+    _startHistory() {
+      this._stopHistory();
+      const c = this._config;
+      if (c.compact || !c.show_history || !c.soc_entity || !this._els.histLine) return;
+      this._fetchHistory();
+      this._histTimer = setInterval(() => this._fetchHistory(), 5 * 60 * 1000);
+    }
+
+    _stopHistory() {
+      if (this._histTimer) {
+        clearInterval(this._histTimer);
+        this._histTimer = null;
+      }
+    }
+
+    async _fetchHistory() {
+      const c = this._config;
+      const h = this._hass;
+      if (!h || !c.soc_entity || !this._els.histLine) return;
+      try {
+        const end = new Date();
+        const start = new Date(end.getTime() - (c.history_hours || 24) * 3600 * 1000);
+        const res = await h.callWS({
+          type: "history/history_during_period",
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          entity_ids: [c.soc_entity],
+          minimal_response: true,
+          no_attributes: true,
+        });
+        const arr = res && res[c.soc_entity];
+        if (!arr || !arr.length) return;
+        const pts = arr
+          .map((p) => {
+            const ts =
+              p.lu != null
+                ? p.lu * 1000
+                : p.last_changed
+                  ? Date.parse(p.last_changed)
+                  : p.last_updated
+                    ? Date.parse(p.last_updated)
+                    : 0;
+            const v = parseFloat(p.s != null ? p.s : p.state);
+            return { t: ts, v };
+          })
+          .filter((p) => Number.isFinite(p.v) && p.t);
+        if (!pts.length) return;
+        this._histData = { start: start.getTime(), end: end.getTime(), pts };
+        this._drawHistory();
+      } catch (_e) {
+        const sec = this.shadowRoot.querySelector(".history");
+        if (sec) sec.style.display = "none";
+      }
+    }
+
+    _drawHistory() {
+      const d = this._histData;
+      const e = this._els;
+      if (!d || !d.pts.length || !e.histLine) return;
+      const W = 100, H = 32, pad = 1.5;
+      const span = Math.max(1, d.end - d.start);
+      const x = (ts) => ((ts - d.start) / span) * W;
+      const y = (v) => H - pad - (Math.max(0, Math.min(100, v)) / 100) * (H - 2 * pad);
+      // Step line: SoC holds its value between samples
+      let line = "";
+      d.pts.forEach((p, i) => {
+        const px = x(p.t).toFixed(2);
+        const py = y(p.v).toFixed(2);
+        line += i === 0 ? `M ${px} ${py}` : ` H ${px} V ${py}`;
+      });
+      const last = d.pts[d.pts.length - 1];
+      const firstX = x(d.pts[0].t).toFixed(2);
+      const endX = x(d.end).toFixed(2);
+      line += ` H ${endX}`;
+      e.histLine.setAttribute("d", line);
+      if (e.histArea) e.histArea.setAttribute("d", `${line} L ${endX} ${H} L ${firstX} ${H} Z`);
+      if (e.histNow) e.histNow.textContent = `${Math.round(last.v)} %`;
     }
 
     _fmtNumber(eid, value) {
@@ -940,8 +1221,15 @@
         grid === null ? null : grid > thr ? "in" : grid < -thr ? "out" : null
       );
 
-      // Battery details tiles
+      // SoC reserve/ceiling markers on the vessel
+      this._updateMarks();
+
+      // Battery details tiles + stacked packs
       this._updateDetails();
+      this._updatePacks();
+
+      // Alerts banner
+      this._updateAlerts(soc, net, statusKey);
 
       // Stats
       this.shadowRoot.querySelectorAll("[data-val]").forEach((el) => {
@@ -951,13 +1239,16 @@
         el.textContent = this._cleanLabel(el.dataset.name);
       });
 
-      // Mode segmented controls
+      // Mode segmented controls + manual power
       this._updateSelects();
+      this._updateManual();
 
       // Sliders
       for (const [key, eid] of [
         ["charge", c.charge_limit_entity],
         ["discharge", c.discharge_limit_entity],
+        ["minsoc", c.min_soc_entity],
+        ["maxsoc", c.max_soc_entity],
       ]) {
         if (!eid) continue;
         const sl = this.shadowRoot.getElementById(`sl-${key}`);
@@ -974,6 +1265,107 @@
         const st = h.states[btn.dataset.entity];
         btn.classList.toggle("on", !!st && st.state === "on");
       });
+    }
+
+    _updateMarks() {
+      const c = this._config;
+      const h = this._hass;
+      const g = this._els.marks;
+      if (!g) return;
+      const marks = [];
+      const add = (val, cls) => {
+        if (val === null) return;
+        const pct = Math.max(0, Math.min(100, val));
+        const y = (CELL.bottom - (CELL.height * pct) / 100).toFixed(1);
+        marks.push(`<line class="zdc-mark ${cls}" x1="13" x2="119" y1="${y}" y2="${y}"/>`);
+      };
+      add(num(h, c.min_soc_entity), "mk-min");
+      add(num(h, c.max_soc_entity), "mk-max");
+      const html = marks.join("");
+      if (g.innerHTML !== html) g.innerHTML = html;
+    }
+
+    _updatePacks() {
+      const c = this._config;
+      const h = this._hass;
+      (c.pack_entities || []).forEach((eid, i) => {
+        const v = num(h, eid);
+        const vv = this.shadowRoot.getElementById(`pkv-${i}`);
+        const ff = this.shadowRoot.getElementById(`pkf-${i}`);
+        if (vv) vv.innerHTML = v === null ? "—" : `${Math.round(v)}<i>%</i>`;
+        if (ff && v !== null) {
+          const pct = Math.max(0, Math.min(100, v));
+          const lvl = pct <= c.low_soc ? "crit" : pct <= c.low_soc * 2 ? "warn" : "ok";
+          ff.style.width = `${pct}%`;
+          ff.style.background = `var(--zdc-l-${lvl})`;
+        }
+      });
+    }
+
+    _updateManual() {
+      const c = this._config;
+      const h = this._hass;
+      const ctl = this._els.manualCtl;
+      if (!ctl) return;
+      // Visible only in the configured manual mode (when a mode entity exists)
+      let show = true;
+      if (c.mode_entity && h.states[c.mode_entity]) {
+        show = String(h.states[c.mode_entity].state) === String(c.manual_mode_value);
+      }
+      ctl.style.display = show ? "" : "none";
+      if (!show) return;
+      const sl = this.shadowRoot.getElementById("sl-manual");
+      if (!sl) return;
+      const b = this._manualBounds();
+      sl.min = b.min;
+      sl.max = b.max;
+      sl.step = Math.max(1, Math.round((b.max - b.min) / 100));
+      const eid = c.manual_power_entity;
+      const raw = num(h, eid);
+      const net = raw === null ? 0 : c.invert_manual ? -raw : raw;
+      if (!this._sliderDrag[eid]) {
+        sl.value = Math.max(b.min, Math.min(b.max, net));
+        this._setManualLabel(net);
+      }
+    }
+
+    _updateAlerts(soc, net, statusKey) {
+      const c = this._config;
+      const h = this._hass;
+      const box = this._els.alerts;
+      if (!box) return;
+      const alerts = [];
+      const socUnavail =
+        c.soc_entity &&
+        h.states[c.soc_entity] &&
+        ["unavailable", "unknown"].includes(h.states[c.soc_entity].state);
+      const conn = c.connectivity_entity && h.states[c.connectivity_entity];
+      if (
+        socUnavail ||
+        (conn && ["off", "unavailable", "unknown", "false"].includes(String(conn.state).toLowerCase()))
+      ) {
+        alerts.push({ icon: "alert", key: "alert_offline", sev: "crit" });
+      }
+      const fault = c.fault_entity && h.states[c.fault_entity];
+      if (fault && ["on", "true", "problem"].includes(String(fault.state).toLowerCase())) {
+        alerts.push({ icon: "alert", key: "alert_fault", sev: "crit" });
+      }
+      const temp = num(h, c.temp_entity);
+      if (temp !== null && temp >= c.alert_temp_max)
+        alerts.push({ icon: "thermo", key: "alert_hot", sev: "warn" });
+      if (temp !== null && temp <= 0 && statusKey === "charging")
+        alerts.push({ icon: "thermo", key: "alert_cold", sev: "warn" });
+      if (soc !== null && soc <= c.low_soc)
+        alerts.push({ icon: "alert", key: "alert_low", sev: "warn" });
+
+      const order = { crit: 0, warn: 1 };
+      alerts.sort((a, b) => order[a.sev] - order[b.sev]);
+      const shown = alerts.slice(0, 2);
+      const html = shown
+        .map((a) => `<div class="alert a-${a.sev}">${svgIcon(a.icon)}<span>${t(h, a.key)}</span></div>`)
+        .join("");
+      if (box.innerHTML !== html) box.innerHTML = html;
+      box.style.display = shown.length ? "" : "none";
     }
 
     /** Total capacity in kWh: capacity sensor, else derived from kWh+SoC, else config. */
@@ -1347,6 +1739,78 @@
         .t-health.warn .tile-v { color: var(--zdc-l-warn); }
         .t-health.crit .tile-v { color: var(--zdc-l-crit); }
 
+        /* ---------------- alerts banner ---------------- */
+        .alerts { display: flex; flex-direction: column; gap: 6px; }
+        .alert {
+          display: flex; align-items: center; gap: 8px;
+          padding: 8px 12px; border-radius: 10px;
+          font-size: .82rem; font-weight: 600;
+        }
+        .alert .ic { width: 17px; height: 17px; flex: none; }
+        .alert.a-crit { background: color-mix(in srgb, var(--zdc-l-crit) 16%, transparent); color: var(--zdc-l-crit); }
+        .alert.a-warn { background: color-mix(in srgb, var(--zdc-l-warn) 18%, transparent); color: var(--zdc-l-warn); }
+
+        /* ---------------- SoC markers on the vessel ---------------- */
+        .zdc-mark { stroke-width: 1.4; stroke-dasharray: 3 3; opacity: .8; }
+        .mk-min { stroke: var(--zdc-l-crit); }
+        .mk-max { stroke: var(--zdc-l-ok); }
+
+        /* ---------------- 24 h history ---------------- */
+        .history { display: flex; flex-direction: column; gap: 4px; }
+        .hist-head {
+          display: flex; justify-content: space-between; align-items: baseline;
+          font-size: .72rem; color: var(--secondary-text-color);
+        }
+        .hist-now { font-weight: 700; color: var(--primary-text-color); font-variant-numeric: tabular-nums; }
+        .hist-svg { width: 100%; height: 46px; display: block; }
+        .hist-line { fill: none; stroke: var(--zdc-batt); stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+        .hist-area { fill: color-mix(in srgb, var(--zdc-batt) 16%, transparent); stroke: none; }
+
+        /* ---------------- battery packs ---------------- */
+        .sec-title {
+          font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+          color: var(--secondary-text-color); margin-bottom: 8px;
+        }
+        .packs {
+          border-top: 1px solid var(--divider-color, color-mix(in srgb, currentColor 12%, transparent));
+          padding-top: 12px;
+        }
+        .pack-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+        .pack {
+          display: flex; flex-direction: column; gap: 5px; cursor: pointer;
+          padding: 9px 11px; border-radius: 12px;
+          background: color-mix(in srgb, currentColor 5%, transparent);
+        }
+        .pack:focus-visible { outline: 2px solid var(--zdc-grid); outline-offset: 2px; }
+        .pack-head { display: flex; justify-content: space-between; align-items: baseline; }
+        .pack-n { font-size: .74rem; color: var(--secondary-text-color); }
+        .pack-v { font-size: .95rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .pack-v i { font-style: normal; font-size: .62rem; font-weight: 600; color: var(--secondary-text-color); }
+        .pack-bar { height: 6px; border-radius: 999px; background: var(--zdc-track); overflow: hidden; }
+        .pack-fill { height: 100%; border-radius: 999px; background: var(--zdc-l-ok); width: 0; transition: width .6s, background .6s; }
+
+        /* ---------------- manual power control ---------------- */
+        .mctl .ctl-v.mv-cha { color: var(--zdc-l-ok); }
+        .mctl .ctl-v.mv-dis { color: var(--zdc-home); }
+        #sl-manual {
+          background: linear-gradient(to right,
+            color-mix(in srgb, var(--zdc-home) 45%, transparent) 0 50%,
+            color-mix(in srgb, var(--zdc-l-ok) 45%, transparent) 50% 100%);
+          height: 6px; border-radius: 999px; -webkit-appearance: none; appearance: none;
+        }
+        .mbtns { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; margin-top: 8px; }
+        .mbtn {
+          display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+          padding: 7px 10px; border-radius: 8px; cursor: pointer; font: inherit;
+          font-size: .78rem; font-weight: 600;
+          border: 1px solid var(--divider-color, color-mix(in srgb, currentColor 15%, transparent));
+          background: none; color: var(--primary-text-color);
+        }
+        .mbtn .ic { width: 14px; height: 14px; }
+        .mbtn.m-cha { color: var(--zdc-l-ok); border-color: color-mix(in srgb, var(--zdc-l-ok) 40%, transparent); }
+        .mbtn.m-dis { color: var(--zdc-home); border-color: color-mix(in srgb, var(--zdc-home) 45%, transparent); }
+        .mbtn:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+
         /* ---------------- compact ---------------- */
         .cbody { display: flex; flex-direction: column; gap: 10px; }
         .crow { display: flex; align-items: center; gap: 12px; cursor: pointer; border: 0; background: none; padding: 0; width: 100%; }
@@ -1503,7 +1967,9 @@
               type: "grid",
               schema: [
                 { name: "show_flow", selector: { boolean: {} } },
+                { name: "show_history", selector: { boolean: {} } },
                 { name: "show_details", selector: { boolean: {} } },
+                { name: "show_alerts", selector: { boolean: {} } },
                 { name: "show_stats", selector: { boolean: {} } },
                 { name: "show_controls", selector: { boolean: {} } },
                 { name: "compact", selector: { boolean: {} } },
@@ -1531,11 +1997,50 @@
               schema: [
                 { name: "charge_total_entity", selector: entity("sensor") },
                 { name: "discharge_total_entity", selector: entity("sensor") },
+                { name: "min_soc_entity", selector: entity("number") },
+                { name: "max_soc_entity", selector: entity("number") },
               ],
             },
+            { name: "pack_entities", selector: { entity: { multiple: true, domain: "sensor" } } },
             {
               name: "capacity",
               selector: { number: { min: 0, max: 100, step: 0.1, mode: "box", unit_of_measurement: "kWh" } },
+            },
+          ],
+        },
+        {
+          name: "",
+          type: "expandable",
+          title: t(this._hass, "ed_sec_advanced"),
+          schema: [
+            { name: "manual_power_entity", selector: entity("number") },
+            {
+              name: "",
+              type: "grid",
+              schema: [
+                { name: "charge_max_entity", selector: entity("sensor") },
+                { name: "discharge_max_entity", selector: entity("sensor") },
+              ],
+            },
+            {
+              name: "",
+              type: "grid",
+              schema: [
+                { name: "manual_mode_value", selector: { text: {} } },
+                { name: "invert_manual", selector: { boolean: {} } },
+              ],
+            },
+            {
+              name: "",
+              type: "grid",
+              schema: [
+                { name: "connectivity_entity", selector: { entity: {} } },
+                { name: "fault_entity", selector: { entity: {} } },
+              ],
+            },
+            {
+              name: "alert_temp_max",
+              selector: { number: { min: 20, max: 80, step: 1, mode: "slider", unit_of_measurement: "°C" } },
             },
           ],
         },
@@ -1590,9 +2095,14 @@
         nominal_capacity: t(h, "ed_nominal"),
         charge_total_entity: t(h, "ed_charge_total"),
         discharge_total_entity: t(h, "ed_discharge_total"),
+        min_soc_entity: t(h, "ed_min_soc_entity"),
+        max_soc_entity: t(h, "ed_max_soc_entity"),
+        pack_entities: t(h, "ed_pack_entities"),
         temp_entity: t(h, "ed_temp"),
         show_flow: t(h, "ed_show_flow"),
+        show_history: t(h, "ed_show_history"),
         show_details: t(h, "ed_show_details"),
+        show_alerts: t(h, "ed_show_alerts"),
         show_stats: t(h, "ed_show_stats"),
         show_controls: t(h, "ed_show_controls"),
         compact: t(h, "ed_compact"),
@@ -1604,6 +2114,14 @@
         charge_limit_entity: t(h, "ed_charge_limit"),
         discharge_limit_entity: t(h, "ed_discharge_limit"),
         switch_entities: t(h, "ed_switches"),
+        manual_power_entity: t(h, "ed_manual_power"),
+        charge_max_entity: t(h, "ed_charge_max"),
+        discharge_max_entity: t(h, "ed_discharge_max"),
+        manual_mode_value: t(h, "ed_manual_mode_value"),
+        invert_manual: t(h, "ed_invert_manual"),
+        connectivity_entity: t(h, "ed_connectivity_entity"),
+        fault_entity: t(h, "ed_fault_entity"),
+        alert_temp_max: t(h, "ed_alert_temp_max"),
       };
     }
 
@@ -1616,6 +2134,8 @@
         capacity: t(h, "ed_capacity_helper"),
         nominal_capacity: t(h, "ed_nominal_helper"),
         discharge_total_entity: t(h, "ed_discharge_total_helper"),
+        pack_entities: t(h, "ed_pack_helper"),
+        manual_mode_value: t(h, "ed_manual_mode_helper"),
       };
     }
 
