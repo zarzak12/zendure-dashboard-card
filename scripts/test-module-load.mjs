@@ -1,10 +1,8 @@
 /**
- * Regression test — loads dist/ exactly like Home Assistant does:
- * as a strict-mode ES module, in an environment where `window.window`
- * is a getter-only property (like every real browser).
- *
- * Catches the classic UMD crash:
- *   TypeError: Cannot set property window of #<Window> which has only a getter
+ * Regression test — loads dist/ exactly like Home Assistant does: as a
+ * strict-mode ES module, in an environment where `window.window` is a
+ * getter-only property (like every real browser). Asserts the custom
+ * elements register without throwing.
  *
  *   node scripts/test-module-load.mjs
  */
@@ -40,7 +38,6 @@ try {
 
 /* ---- assertions ---- */
 const checks = [
-  ["window.gsap is defined", !!globalThis.gsap],
   ["custom element zendure-dashboard-card registered", registry.has("zendure-dashboard-card")],
   ["custom element zendure-dashboard-card-editor registered", registry.has("zendure-dashboard-card-editor")],
   [

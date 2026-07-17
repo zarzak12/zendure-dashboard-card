@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.0 — 2026-07-17
+
+- **Reworked liquid vessel** — the surface is now three layered waves whose
+  sampled points oscillate over time with a slow amplitude "breathing", for an
+  organic, non-triangular water look; the fill level eases smoothly to the SoC
+- **Removed GSAP** — the wave animation is a tiny `requestAnimationFrame` loop,
+  so the card is now **dependency-free**; bundle shrinks from ~162 KB to ~89 KB
+  and the ES-module/UMD edge case is gone for good
+
 ## 1.3.1 — 2026-07-17
 
 - Live **battery power** (charge/discharge W with arrow) shown next to the vessel

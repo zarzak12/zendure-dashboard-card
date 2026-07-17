@@ -1,6 +1,7 @@
 ﻿/**
- * Build script — concatenates the bundled vendors and the card source
- * into the single distributable file HACS serves.
+ * Build script — wraps the card source with a licence banner into the single
+ * distributable file HACS serves. The card is dependency-free (waves and the
+ * liquid are pure CSS), so there are no vendors to bundle.
  *
  *   node scripts/build.mjs
  */
@@ -17,28 +18,10 @@ const version = (cardSource.match(/CARD_VERSION = "([^"]+)"/) || [])[1] || "0.0.
 const banner = `/*!
  * Zendure Dashboard Card v${version}
  * https://github.com/zarzak12/zendure-dashboard-card — MIT License
- *
- * Bundles GSAP ${(read("vendor/gsap.min.js").match(/gsap[^\d]*(\d+\.\d+\.\d+)/) || [])[1] || "3.13.x"}
- * (c) Webflow, Inc. — https://gsap.com/community/standard-license/
  */
 `;
 
-/**
- * GSAP's UMD header runs `(t = t || self).window = t.window || {}`.
- * In a classic <script> (sloppy mode) the illegal write to the getter-only
- * `window.window` fails SILENTLY — but Home Assistant loads Lovelace
- * resources as ES modules (strict mode), where it throws:
- *   TypeError: Cannot set property window of #<Window> which has only a getter
- * Fix: shadow `self` with a plain writable object whose `window` points to
- * the real window — the UMD assigns onto that object, then hands the real
- * window to the factory, so gsap still lands on window.gsap.
- */
-const wrapVendor = (code) => `;(function (self) {
-${code}
-}).call(undefined, typeof window !== "undefined" ? { window: window } : { window: globalThis });
-`;
-
-const out = banner + wrapVendor(read("vendor/gsap.min.js")) + cardSource;
+const out = banner + cardSource;
 
 mkdirSync(join(root, "dist"), { recursive: true });
 writeFileSync(join(root, "dist/zendure-dashboard-card.js"), out);

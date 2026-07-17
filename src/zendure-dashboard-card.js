@@ -8,7 +8,7 @@
 (() => {
   "use strict";
 
-  const CARD_VERSION = "1.3.1";
+  const CARD_VERSION = "1.4.0";
   const CARD_TAG = "zendure-dashboard-card";
   const EDITOR_TAG = "zendure-dashboard-card-editor";
 
@@ -278,32 +278,6 @@
       .trim();
   }
 
-  /**
-   * Build a filled "wave" path: a wavy top edge from startX→endX closed down to
-   * floorY. The pattern repeats every `period`, and we overshoot both edges, so
-   * translating the whole path by one period in X loops seamlessly.
-   */
-  /* Horizontal loop distance (px). Each wave sums 3 sines whose wavelengths all
-   * divide this, so the pattern tiles seamlessly when translated by one unit. */
-  const WAVE_UNIT = 60;
-
-  function wavePath(amp, { phase = 0, startX = -64, endX = 200, baseY = 6, floorY = 72 } = {}) {
-    // Superposed sines of different wavelengths → irregular, ocean-like crest.
-    const comps = [
-      { L: WAVE_UNIT, a: amp, p: phase },
-      { L: WAVE_UNIT / 2, a: amp * 0.52, p: phase * 1.7 + 1.3 },
-      { L: WAVE_UNIT / 3, a: amp * 0.3, p: phase * 2.3 + 2.9 },
-    ];
-    const yAt = (x) =>
-      baseY + comps.reduce((s, c) => s + c.a * Math.sin((x / c.L) * 2 * Math.PI + c.p), 0);
-    let d = `M ${startX} ${yAt(startX).toFixed(2)}`;
-    for (let x = startX + 3; x <= endX; x += 3) d += ` L ${x} ${yAt(x).toFixed(2)}`;
-    return `${d} L ${endX} ${floorY} L ${startX} ${floorY} Z`;
-  }
-
-  /* Vessel geometry (viewBox 0 0 132 208) — interior cell the water fills. */
-  const CELL = { top: 20, bottom: 196, get height() { return this.bottom - this.top; } };
-
   function fmtDuration(hrs) {
     if (!Number.isFinite(hrs) || hrs <= 0) return null;
     if (hrs >= 48) return "> 48 h";
@@ -481,7 +455,6 @@
       this.attachShadow({ mode: "open" });
       this._built = false;
       this._els = {};
-      this._tweens = {};
       this._lastStates = {};
       this._sliderDrag = {};
       this._uid = Math.random().toString(36).slice(2, 8);
@@ -591,6 +564,7 @@
       this._lastStates = {};
       this._update();
       this._startHistory();
+      this._startWaves();
     }
 
     _headerHtml() {
@@ -603,41 +577,27 @@
         </header>`;
     }
 
-    /** The "battery vessel": a glass cell filled with animated liquid to SoC. */
-    _vesselSvg() {
-      const uid = this._uid;
-      const clip = `zdc-cell-${uid}`;
-      // Two parallax wave crests + a solid body that fills down past the cell.
-      const waves = `
-        <path class="zdc-wave zdc-wave-3" d="${wavePath(2.6, { phase: 4.2 })}"/>
-        <path class="zdc-wave zdc-wave-2" d="${wavePath(3.6, { phase: 2.1 })}"/>
-        <path class="zdc-wave zdc-wave-1" d="${wavePath(5.0, { phase: 0 })}"/>`;
-      const body = `<rect class="zdc-fill" x="-30" y="6" width="196" height="320"/>`;
-      const bubbles = Array.from({ length: 6 }, (_, i) => {
-        const cx = 30 + ((i * 79) % 74);
-        const r = 1.4 + ((i * 7) % 3) * 0.6;
-        return `<circle class="zdc-bubble" data-i="${i}" cx="${cx}" cy="${CELL.bottom}" r="${r}"/>`;
-      }).join("");
+    /**
+     * The "battery vessel": a rounded glass cell whose liquid fills to the SoC.
+     * The surface is three layered waves, each sampled into points that
+     * oscillate over time (phase-offset along the width) with a slow amplitude
+     * "breathing" — an organic, non-triangular water surface. Driven by a small
+     * requestAnimationFrame loop (no external dependency).
+     */
+    _vesselHtml() {
       return `
-        <svg class="zdc-vessel" viewBox="0 0 132 208" role="img" aria-label="battery level">
-          <defs>
-            <clipPath id="${clip}">
-              <rect x="13" y="${CELL.top - 1}" width="106" height="${CELL.height + 2}" rx="13"/>
-            </clipPath>
-          </defs>
-          <rect class="zdc-cap" x="52" y="2" width="28" height="11" rx="4.5"/>
-          <g clip-path="url(#${clip})">
-            <rect class="zdc-void" x="13" y="${CELL.top - 1}" width="106" height="${CELL.height + 2}"/>
-            <g class="zdc-water" id="zdc-water">
-              ${body}
-              <g class="zdc-bubbles" id="zdc-bubbles">${bubbles}</g>
-              ${waves}
-            </g>
-          </g>
-          <g class="zdc-marks" id="zdc-marks"></g>
-          <rect class="zdc-glass" x="6" y="12" width="120" height="192" rx="20"/>
-          <rect class="zdc-shine" x="20" y="26" width="14" height="150" rx="7"/>
-        </svg>`;
+        <div class="vessel" aria-hidden="true">
+          <div class="v-cap"></div>
+          <div class="v-cell">
+            <svg class="v-svg" id="v-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path class="v-wv v-wv-c" id="v-wv-2"/>
+              <path class="v-wv v-wv-b" id="v-wv-1"/>
+              <path class="v-wv v-wv-a" id="v-wv-0"/>
+            </svg>
+            <div class="v-marks" id="v-marks"></div>
+            <div class="v-shine"></div>
+          </div>
+        </div>`;
     }
 
     _heroHtml() {
@@ -645,7 +605,7 @@
       return `
         <section class="hero" id="hero" role="button" tabindex="0"
                  aria-label="${t(h, "battery")}">
-          ${this._vesselSvg()}
+          ${this._vesselHtml()}
           <div class="hero-info">
             <div class="soc" id="soc">—</div>
             <div class="batt-power" id="batt-power"></div>
@@ -865,85 +825,26 @@
         eta: $("#eta"),
         barFill: $("#bar-fill"),
         hero: $("#hero"),
-        water: $("#zdc-water"),
-        bubbles: $("#zdc-bubbles"),
-        waves: this.shadowRoot.querySelectorAll(".zdc-wave"),
-        marks: $("#zdc-marks"),
+        svg: $("#v-svg"),
+        wv: [$("#v-wv-0"), $("#v-wv-1"), $("#v-wv-2")],
+        marks: $("#v-marks"),
         alerts: $("#alerts"),
         histArea: $("#hist-area"),
         histLine: $("#hist-line"),
         histNow: $("#hist-now"),
         manualCtl: $("#manual-ctl"),
       };
-      this._killTweens();
-      this._waterY = null;
-
-      // GSAP is bundled above this code in the dist file
-      this._gsapOK = false;
-      if (!this._reducedMotion() && window.gsap) {
-        this._gsapOK = true;
-        this._setupVesselTweens();
-      }
-    }
-
-    _reducedMotion() {
-      return (
-        typeof matchMedia === "function" &&
-        matchMedia("(prefers-reduced-motion: reduce)").matches
-      );
-    }
-
-    /** Infinite wave drift + rising bubbles, paused until there is power flow. */
-    _setupVesselTweens() {
-      const G = window.gsap;
-      const e = this._els;
-      if (!e.water || !e.waves.length) return;
-
-      // Parallax: each crest layer drifts at its own speed (timeScale set by power).
-      const speeds = [4.0, 3.0, 2.2]; // waves[0]=back … last=front
-      this._tweens.waveArr = [];
-      e.waves.forEach((w, i) => {
-        const tw = G.to(w, {
-          x: -WAVE_UNIT,
-          duration: speeds[i] != null ? speeds[i] : 3,
-          ease: "none",
-          repeat: -1,
-        });
-        this._tweens[`wave${i}`] = tw;
-        this._tweens.waveArr.push(tw);
-      });
-
-      // Bubbles rise through the water (local coords: y=0 is the surface).
-      const bubbles = e.bubbles ? e.bubbles.querySelectorAll(".zdc-bubble") : [];
-      this._tweens.bubbles = G.timeline({ repeat: -1, paused: true });
-      bubbles.forEach((b, i) => {
-        const dur = 1.8 + (i % 3) * 0.5;
-        this._tweens.bubbles.to(
-          b,
-          {
-            keyframes: [
-              { attr: { cy: 150 }, opacity: 0, duration: 0 },
-              { opacity: 0.8, duration: 0.3 },
-              { attr: { cy: 6 }, opacity: 0, duration: dur, ease: "sine.out" },
-            ],
-          },
-          i * 0.4
-        );
-      });
-      this._tweens.bubbles.pause();
-    }
-
-    _killTweens() {
-      for (const k of Object.keys(this._tweens || {})) {
-        if (this._tweens[k]) this._tweens[k].kill();
-      }
-      this._tweens = {};
     }
 
     disconnectedCallback() {
-      this._killTweens();
       this._stopHistory();
+      this._stopWaves();
       this._built = false;
+    }
+
+    connectedCallback() {
+      // Resume the wave loop if the card was reattached (e.g. tab switch).
+      if (this._built && !this._raf) this._startWaves();
     }
 
     _bindEvents() {
@@ -1227,7 +1128,7 @@
       }
 
       // Vessel (liquid) or compact bar
-      if (this._els.water) this._updateVessel(soc, net, level, statusKey);
+      if (this._els.svg) this._updateVessel(soc, net, level);
       if (this._els.barFill && soc !== null) {
         const pct = Math.max(0, Math.min(100, soc));
         this._els.barFill.style.width = `${pct}%`;
@@ -1298,8 +1199,7 @@
       const add = (val, cls) => {
         if (val === null) return;
         const pct = Math.max(0, Math.min(100, val));
-        const y = (CELL.bottom - (CELL.height * pct) / 100).toFixed(1);
-        marks.push(`<line class="zdc-mark ${cls}" x1="13" x2="119" y1="${y}" y2="${y}"/>`);
+        marks.push(`<div class="v-mark ${cls}" style="bottom:${pct}%"></div>`);
       };
       add(num(h, c.min_soc_entity), "mk-min");
       add(num(h, c.max_soc_entity), "mk-max");
@@ -1425,39 +1325,82 @@
       return null;
     }
 
-    _updateVessel(soc, net, level, statusKey) {
+    _updateVessel(soc, net, level) {
       const e = this._els;
-      // Move the water group so its wave baseline (local y=6) sits at the SoC line:
-      // full (100%) → cell top, empty (0%) → cell bottom.
-      const WAVE_BASE = 6;
+      // Target water level (viewBox units, 0 = top / 100 = bottom).
       const pct = soc === null ? 0 : Math.max(0, Math.min(100, soc));
-      const targetY = CELL.bottom - WAVE_BASE - (CELL.height * pct) / 100;
-      e.water.style.setProperty("--water", `var(--zdc-l-${level})`);
+      this._levelTarget = 100 - pct;
+      if (this._levelDisp == null) this._levelDisp = this._levelTarget;
+      if (e.svg) e.svg.style.setProperty("--water", `var(--zdc-l-${level})`);
+      // Wave liveliness scales with throughput (calm at idle, brisk under power).
+      const flow = Math.abs(net || 0);
+      this._waveSpeed = Math.max(0.6, Math.min(2.2, 0.6 + flow / 900));
+    }
 
-      if (!this._gsapOK) {
-        e.water.setAttribute("transform", `translate(0 ${targetY})`);
+    /* ---------- wave animation (3 layers of oscillating sampled points) ---------- */
+    _startWaves() {
+      this._stopWaves();
+      if (!this._els.wv || !this._els.wv[0]) return;
+      // Low spatial frequencies → long, gentle swells (freq = waves across width).
+      this._waves = [
+        { freq: 0.5, dur: 4.5, dy: 0, amp: 3.4, ampTo: 4.4, ampDur: 3.0 }, // front (opaque)
+        { freq: 1.0, dur: 3.6, dy: -1.5, amp: 2.4, ampTo: 3.4, ampDur: 3.6 }, // mid
+        { freq: 0.8, dur: 5.2, dy: -2.5, amp: 2.0, ampTo: 3.0, ampDur: 4.0 }, // back
+      ];
+      this._waveSpeed = this._waveSpeed || 0.8;
+      const reduced =
+        typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduced) {
+        this._drawWaves(0);
         return;
       }
-      const G = window.gsap;
-      if (this._waterY === null) {
-        G.set(e.water, { y: targetY });
-      } else if (Math.abs(this._waterY - targetY) > 0.5) {
-        G.to(e.water, { y: targetY, duration: 1.1, ease: "power2.out" });
-      }
-      this._waterY = targetY;
+      this._t0 = performance.now();
+      let last = 0;
+      const loop = (now) => {
+        this._raf = requestAnimationFrame(loop);
+        if (now - last < 33) return; // ~30 fps
+        last = now;
+        this._drawWaves((now - this._t0) / 1000);
+      };
+      this._raf = requestAnimationFrame(loop);
+    }
 
-      // Wave speed reflects throughput; calmer at idle.
-      const flow = Math.abs(net || 0);
-      const speed = Math.max(0.45, Math.min(2.6, 0.45 + flow / 500));
-      (this._tweens.waveArr || []).forEach((tw, i) => tw.timeScale(speed * (1 - i * 0.14)));
-
-      // Bubbles only while charging.
-      if (this._tweens.bubbles) {
-        const bubbling = statusKey === "charging";
-        this._els.bubbles.style.opacity = bubbling ? "1" : "0";
-        if (bubbling && this._tweens.bubbles.paused()) this._tweens.bubbles.play();
-        else if (!bubbling && !this._tweens.bubbles.paused()) this._tweens.bubbles.pause();
+    _stopWaves() {
+      if (this._raf) {
+        cancelAnimationFrame(this._raf);
+        this._raf = null;
       }
+    }
+
+    _drawWaves(time) {
+      const e = this._els;
+      if (!e.wv || !e.wv[0] || !this._waves) return;
+      // Ease the displayed level toward the target for a smooth rise/fall.
+      if (this._levelDisp == null) this._levelDisp = this._levelTarget || 0;
+      this._levelDisp += ((this._levelTarget || 0) - this._levelDisp) * 0.08;
+      const yl = this._levelDisp;
+      const t = time * (this._waveSpeed || 1);
+      const SEG = 40;
+      const TAU = Math.PI * 2;
+
+      this._waves.forEach((w, wi) => {
+        const path = e.wv[wi];
+        if (!path) return;
+        const period = 2 * w.dur;
+        const breath = 0.5 * (1 - Math.cos((TAU * time) / (2 * w.ampDur)));
+        const amp = w.amp + (w.ampTo - w.amp) * breath;
+        let d = "";
+        for (let i = 0; i <= SEG; i++) {
+          const norm = i / SEG;
+          const x = (norm * 100).toFixed(2);
+          const y = (
+            yl + w.dy + amp * Math.sin((TAU * t) / period + norm * w.freq * TAU)
+          ).toFixed(2);
+          d += (i === 0 ? "M" : "L") + ` ${x} ${y}`;
+        }
+        d += " L 100 100 L 0 100 Z";
+        path.setAttribute("d", d);
+      });
     }
 
     _updateStrip(key, value, dir) {
@@ -1667,22 +1610,32 @@
         .hero:focus-visible, .rd:focus-visible, .crow:focus-visible, .mini:focus-visible {
           outline: 2px solid var(--zdc-grid); outline-offset: 3px; border-radius: 14px;
         }
-        .zdc-vessel { width: 104px; height: 164px; flex: none; overflow: visible; }
-        .zdc-cap { fill: var(--zdc-track); }
-        .zdc-void { fill: color-mix(in srgb, currentColor 7%, transparent); }
-        .zdc-glass {
-          fill: none; stroke: color-mix(in srgb, currentColor 22%, transparent);
-          stroke-width: 3;
+        /* Battery vessel — HTML/CSS liquid with ellipse waves */
+        .vessel { position: relative; width: 104px; height: 168px; flex: none; }
+        .v-cap {
+          position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+          width: 34px; height: 9px; border-radius: 4px 4px 0 0;
+          background: color-mix(in srgb, currentColor 20%, transparent);
         }
-        .zdc-shine { fill: #fff; opacity: .10; }
-        .zdc-water { will-change: transform; }
-        .zdc-fill { fill: var(--water, var(--zdc-l-ok)); transition: fill .5s; }
-        .zdc-wave { fill: var(--water, var(--zdc-l-ok)); transition: fill .5s; }
-        .zdc-wave-1 { opacity: .95; }
-        .zdc-wave-2 { opacity: .55; }
-        .zdc-wave-3 { opacity: .32; }
-        .zdc-bubble { fill: #fff; opacity: 0; }
-        .zdc-bubbles { transition: opacity .4s; }
+        .v-cell {
+          position: absolute; top: 9px; left: 0; right: 0; bottom: 0;
+          border: 3px solid color-mix(in srgb, currentColor 22%, transparent);
+          border-radius: 20px; overflow: hidden;
+          background: color-mix(in srgb, currentColor 6%, transparent);
+        }
+        .v-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .v-wv { transition: fill .5s; }
+        .v-wv-a { fill: var(--water, var(--zdc-l-ok)); fill-opacity: .95; }
+        .v-wv-b { fill: color-mix(in srgb, #fff 32%, var(--water, var(--zdc-l-ok))); fill-opacity: .55; }
+        .v-wv-c { fill: color-mix(in srgb, #fff 58%, var(--water, var(--zdc-l-ok))); fill-opacity: .45; }
+        .v-shine {
+          position: absolute; top: 12px; left: 13px; width: 11px; height: 58%;
+          border-radius: 8px; background: #fff; opacity: .10; pointer-events: none;
+        }
+        .v-marks { position: absolute; inset: 0; pointer-events: none; }
+        .v-mark { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed; opacity: .85; }
+        .v-mark.mk-min { border-color: var(--zdc-l-crit); }
+        .v-mark.mk-max { border-color: var(--zdc-l-ok); }
 
         .hero-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
         .soc {
@@ -1780,11 +1733,6 @@
         .alert .ic { width: 17px; height: 17px; flex: none; }
         .alert.a-crit { background: color-mix(in srgb, var(--zdc-l-crit) 16%, transparent); color: var(--zdc-l-crit); }
         .alert.a-warn { background: color-mix(in srgb, var(--zdc-l-warn) 18%, transparent); color: var(--zdc-l-warn); }
-
-        /* ---------------- SoC markers on the vessel ---------------- */
-        .zdc-mark { stroke-width: 1.4; stroke-dasharray: 3 3; opacity: .8; }
-        .mk-min { stroke: var(--zdc-l-crit); }
-        .mk-max { stroke: var(--zdc-l-ok); }
 
         /* ---------------- 24 h history ---------------- */
         .history { display: flex; flex-direction: column; gap: 4px; }
@@ -1928,12 +1876,9 @@
 
         @media (max-width: 340px) {
           .hero { gap: 14px; }
-          .zdc-vessel { width: 84px; height: 132px; }
+          .vessel { width: 84px; height: 136px; }
           .soc { font-size: 2.3rem; }
           .rd-l { display: none; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .zdc-bubbles { display: none !important; }
         }
       `;
     }

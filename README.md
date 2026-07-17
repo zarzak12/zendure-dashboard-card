@@ -26,7 +26,7 @@ A modern, fully configurable Lovelace card to **monitor and control your Zendure
 - 🌍 **English + French**, follows the Home Assistant language automatically
 - 🌗 **Light & dark themes**, colorblind-safe validated palette, `prefers-reduced-motion` support
 - 📱 Responsive — works in Masonry and Sections dashboards, compact mode for dense layouts
-- 🪶 Single self-contained file — [GSAP](https://gsap.com) is bundled (no CDN, works offline)
+- 🪶 Single self-contained file — **zero dependencies** (waves & liquid are pure CSS/SVG), works offline
 
 Works with the [Zendure Home Assistant integration](https://github.com/Zendure/Zendure-HA) and any other integration — every entity can be selected manually.
 
@@ -143,13 +143,14 @@ zendure-home-color: "#e87ba4"
 
 ## Development
 
-The card source lives in [`src/zendure-dashboard-card.js`](src/zendure-dashboard-card.js). The distributable file bundles GSAP ([`vendor/`](vendor/)) so the card works offline and without CDN access:
+The card source lives in [`src/zendure-dashboard-card.js`](src/zendure-dashboard-card.js). The build step just adds a licence banner (the card has **no dependencies** — the wave animation is a tiny `requestAnimationFrame` loop, everything else is CSS/SVG):
 
 ```bash
-node scripts/build.mjs   # → dist/zendure-dashboard-card.js
+node scripts/build.mjs          # → dist/zendure-dashboard-card.js
+node scripts/test-module-load.mjs   # sanity-check: loads as an ES module
 ```
 
-Never edit `dist/` directly — CI rejects a `dist` that doesn't match `src`. GSAP is © Webflow, Inc., distributed under the [GSAP Standard License](https://gsap.com/community/standard-license/) (free, including commercial use).
+Never edit `dist/` directly — CI rejects a `dist` that doesn't match `src`.
 
 ## Troubleshooting
 
@@ -180,7 +181,7 @@ Une carte Lovelace moderne et entièrement paramétrable pour **surveiller et pi
 - 🌍 **Français + anglais**, suit automatiquement la langue de Home Assistant
 - 🌗 **Thèmes clair et sombre**, palette validée accessible aux daltoniens
 - 📱 Responsive, mode compact pour les tableaux de bord denses
-- 🪶 Un seul fichier autonome — GSAP intégré (pas de CDN, fonctionne hors-ligne)
+- 🪶 Un seul fichier autonome — **aucune dépendance** (vagues & liquide en CSS/SVG pur), fonctionne hors-ligne
 
 ## Installation
 
