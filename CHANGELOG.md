@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0 — 2026-07-17
+
+- **Battery details grid** — new tiles for available energy, total capacity,
+  **state of health** (current capacity ÷ nominal), **cycle count**
+  (lifetime discharged ÷ capacity) and round-trip **efficiency**
+- New options: `capacity_entity` (total-capacity sensor, also feeds the ETA),
+  `nominal_capacity`, `charge_total_entity`, `discharge_total_entity`,
+  `show_details`
+- Capacity for the projection now prefers the capacity sensor, then kWh+SoC, then the manual value
+
 ## 1.1.0 — 2026-07-17
 
 - **New hero: animated liquid "battery vessel"** replacing the flow diagram — a glass

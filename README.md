@@ -13,6 +13,7 @@ A modern, fully configurable Lovelace card to **monitor and control your Zendure
 
 - 🌊 **Living battery vessel** — a glass cell fills with animated liquid to the exact state of charge; waves speed up with power throughput, bubbles rise while charging, colour shifts green → amber → red as it drains
 - ⏱️ **Smart projection** — "Full in 2 h 15" / "Runtime 5 h 30", computed from net power and capacity (something no native HA card shows)
+- 🩺 **Battery details** — available energy, total capacity, **state of health**, **cycle count** and round-trip **efficiency**, computed from your sensors
 - 📈 **Clean power readouts** — solar / home / grid values with direction arrows (no redundant flow diagram — HA's energy card already does that)
 - 📊 **Statistics chips** — temperature + any extra sensors you pick
 - 🎛️ **Built-in controls** — operation mode, charge/discharge limits, switches (no extra cards needed)
@@ -84,9 +85,14 @@ switch_entities:
 | `grid_entity` | entity | — | Grid input power (`gridInputPower`), negative = export |
 | `charge_entity` | entity | — | Power flowing **into** the battery (`outputPackPower`) |
 | `discharge_entity` | entity | — | Power flowing **out of** the battery (`packInputPower`) |
-| `energy_entity` | entity | — | Stored energy in kWh, shown under the SoC; also used to auto-derive capacity for the projection |
-| `capacity` | number | — | Battery capacity in kWh — fallback for the "full in / runtime" projection when no kWh sensor exists |
+| `energy_entity` | entity | — | Available energy in kWh, shown under the SoC and as the "Available" tile |
+| `capacity_entity` | entity | — | Total-capacity sensor (kWh) — drives the projection and the "Capacity"/"Health" tiles |
+| `nominal_capacity` | number | — | Rated capacity (kWh) — enables the state-of-health tile (current ÷ nominal) |
+| `charge_total_entity` | entity | — | Lifetime charged energy (kWh) — enables the efficiency tile |
+| `discharge_total_entity` | entity | — | Lifetime discharged energy (kWh) — enables the cycle-count and efficiency tiles |
+| `capacity` | number | — | Manual capacity (kWh) fallback when no capacity sensor exists |
 | `reserve_soc` | number | `0` | Floor (%) used as "empty" for the runtime estimate |
+| `show_details` | bool | `true` | Show the battery details grid (available / capacity / health / cycles / efficiency) |
 | `temp_entity` | entity | — | Temperature chip in the statistics row |
 | `mode_entity` | entity | — | `select` entity rendered as segmented buttons |
 | `select_entities` | list | `[]` | Extra `select` entities rendered as segmented buttons (e.g. AC charge/discharge mode). Known option values (`input`, `output`, `smart`, `manual`, `off`) are translated automatically |
@@ -143,6 +149,7 @@ Une carte Lovelace moderne et entièrement paramétrable pour **surveiller et pi
 
 - 🌊 **Batterie-réservoir vivante** — une cuve en verre se remplit d'un liquide animé au niveau exact du SoC ; les vagues accélèrent avec la puissance, des bulles montent pendant la charge, la couleur passe vert → ambre → rouge en se vidant
 - ⏱️ **Projection intelligente** — « Pleine dans 2 h 15 » / « Autonomie 5 h 30 », calculée depuis la puissance nette et la capacité (ce qu'aucune carte HA native n'affiche)
+- 🩺 **Détails batterie** — énergie disponible, capacité totale, **état de santé**, **nombre de cycles** et **rendement**, calculés depuis vos capteurs
 - 📈 **Puissances épurées** — solaire / maison / réseau avec flèches de sens (pas de diagramme de flux redondant — la carte énergie de HA le fait déjà)
 - 📊 **Puces de statistiques** — température + tous les capteurs de votre choix
 - 🎛️ **Contrôles intégrés** — mode de fonctionnement, limites de charge/décharge, interrupteurs

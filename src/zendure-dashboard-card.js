@@ -8,7 +8,7 @@
 (() => {
   "use strict";
 
-  const CARD_VERSION = "1.1.0";
+  const CARD_VERSION = "1.2.0";
   const CARD_TAG = "zendure-dashboard-card";
   const EDITOR_TAG = "zendure-dashboard-card-editor";
 
@@ -33,6 +33,11 @@
       autonomy: "Runtime",
       full: "Battery full",
       empty: "Battery empty",
+      det_available: "Available",
+      det_capacity: "Capacity",
+      det_health: "Health",
+      det_cycles: "Cycles",
+      det_efficiency: "Efficiency",
       temperature: "Temperature",
       controls: "Controls",
       stats: "Statistics",
@@ -63,7 +68,15 @@
       ed_discharge: "Battery discharge power",
       ed_energy: "Stored energy (kWh)",
       ed_capacity: "Battery capacity (kWh)",
-      ed_capacity_helper: "Used for the “full in / runtime” estimate when no kWh sensor exists. Auto-derived from the kWh sensor otherwise.",
+      ed_capacity_helper: "Fallback for the “full in / runtime” estimate when no capacity sensor exists.",
+      ed_sec_battery: "Battery & health",
+      ed_capacity_entity: "Total capacity sensor (kWh)",
+      ed_nominal: "Nominal capacity (kWh)",
+      ed_nominal_helper: "New/rated capacity — enables the health % (current capacity ÷ nominal).",
+      ed_charge_total: "Lifetime charged (kWh)",
+      ed_discharge_total: "Lifetime discharged (kWh)",
+      ed_discharge_total_helper: "Cumulative discharged energy — enables the cycle count (÷ capacity) and efficiency.",
+      ed_show_details: "Battery details (available, health, cycles…)",
       ed_temp: "Temperature",
       ed_show_flow: "Power readouts (solar / home / grid)",
       ed_show_stats: "Statistics row",
@@ -95,6 +108,11 @@
       autonomy: "Autonomie",
       full: "Batterie pleine",
       empty: "Batterie vide",
+      det_available: "Disponible",
+      det_capacity: "Capacité",
+      det_health: "Santé",
+      det_cycles: "Cycles",
+      det_efficiency: "Rendement",
       temperature: "Température",
       controls: "Contrôles",
       stats: "Statistiques",
@@ -125,7 +143,15 @@
       ed_discharge: "Puissance de décharge batterie",
       ed_energy: "Énergie stockée (kWh)",
       ed_capacity: "Capacité batterie (kWh)",
-      ed_capacity_helper: "Sert à l'estimation « pleine dans / autonomie » sans capteur kWh. Déduite automatiquement du capteur kWh sinon.",
+      ed_capacity_helper: "Repli pour l'estimation « pleine dans / autonomie » sans capteur de capacité.",
+      ed_sec_battery: "Batterie & santé",
+      ed_capacity_entity: "Capteur de capacité totale (kWh)",
+      ed_nominal: "Capacité nominale (kWh)",
+      ed_nominal_helper: "Capacité neuve — active le % de santé (capacité actuelle ÷ nominale).",
+      ed_charge_total: "Charge cumulée (kWh)",
+      ed_discharge_total: "Décharge cumulée (kWh)",
+      ed_discharge_total_helper: "Énergie déchargée cumulée — active le nombre de cycles (÷ capacité) et le rendement.",
+      ed_show_details: "Détails batterie (disponible, santé, cycles…)",
       ed_temp: "Température",
       ed_show_flow: "Puissances (solaire / maison / réseau)",
       ed_show_stats: "Ligne de statistiques",
@@ -345,6 +371,9 @@
     charge_entity: "",
     discharge_entity: "",
     energy_entity: "",
+    capacity_entity: "",
+    charge_total_entity: "",
+    discharge_total_entity: "",
     temp_entity: "",
     mode_entity: "",
     select_entities: [],
@@ -354,12 +383,14 @@
     switch_entities: [],
     show_flow: true,
     show_stats: true,
+    show_details: true,
     show_controls: true,
     compact: false,
     invert_battery: false,
     low_soc: 15,
     flow_threshold: 10,
     capacity: 0,
+    nominal_capacity: 0,
     reserve_soc: 0,
   };
 
@@ -425,6 +456,7 @@
       return [
         c.soc_entity, c.solar_entity, c.home_entity, c.grid_entity,
         c.charge_entity, c.discharge_entity, c.energy_entity, c.temp_entity,
+        c.capacity_entity, c.charge_total_entity, c.discharge_total_entity,
         c.mode_entity, c.charge_limit_entity, c.discharge_limit_entity,
         ...(c.select_entities || []),
         ...(c.stats_entities || []),
@@ -462,6 +494,7 @@
                   ? this._compactHtml()
                   : this._heroHtml() + (hasStrip ? this._stripHtml() : "")
             }
+            ${configured && !c.compact && c.show_details ? this._detailsHtml() : ""}
             ${configured && !c.compact && c.show_stats ? this._statsHtml() : ""}
             ${configured && !c.compact && c.show_controls ? this._controlsHtml() : ""}
           </div>
@@ -547,6 +580,39 @@
       if (c.home_entity) items.push(item("home", "home", t(h, "home"), c.home_entity));
       if (c.grid_entity) items.push(item("grid", "tower", t(h, "grid"), c.grid_entity));
       return `<section class="strip">${items.join("")}</section>`;
+    }
+
+    /** Which detail tiles are shown (decided from config; values filled in _update). */
+    _detailKeys() {
+      const c = this._config;
+      const keys = [];
+      if (c.energy_entity) keys.push("available");
+      if (c.capacity_entity || c.capacity > 0 || c.energy_entity) keys.push("capacity");
+      if (c.nominal_capacity > 0) keys.push("health");
+      if (c.discharge_total_entity) keys.push("cycles");
+      if (c.charge_total_entity && c.discharge_total_entity) keys.push("efficiency");
+      return keys;
+    }
+
+    _detailsHtml() {
+      const h = this._hass;
+      const keys = this._detailKeys();
+      if (!keys.length) return "";
+      const more = {
+        available: this._config.energy_entity,
+        capacity: this._config.capacity_entity,
+        cycles: this._config.discharge_total_entity,
+      };
+      const tiles = keys.map((k) => {
+        const eid = more[k];
+        const attrs = eid ? ` data-more="${eid}" role="button" tabindex="0"` : "";
+        return `
+          <div class="tile t-${k}"${attrs}>
+            <span class="tile-l">${t(h, `det_${k}`)}</span>
+            <span class="tile-v" id="tv-${k}">—</span>
+          </div>`;
+      });
+      return `<section class="details">${tiles.join("")}</section>`;
     }
 
     _compactHtml() {
@@ -874,6 +940,9 @@
         grid === null ? null : grid > thr ? "in" : grid < -thr ? "out" : null
       );
 
+      // Battery details tiles
+      this._updateDetails();
+
       // Stats
       this.shadowRoot.querySelectorAll("[data-val]").forEach((el) => {
         el.textContent = fmtState(h, el.dataset.val);
@@ -910,13 +979,15 @@
       });
     }
 
-    /** Usable capacity in kWh: derived live from the kWh sensor, else config. */
+    /** Total capacity in kWh: capacity sensor, else derived from kWh+SoC, else config. */
     _capacityKwh() {
       const c = this._config;
       const h = this._hass;
+      const cap = num(h, c.capacity_entity);
+      if (cap !== null && cap > 0) return cap;
       const e = num(h, c.energy_entity);
       const soc = num(h, c.soc_entity);
-      if (e !== null && soc !== null && soc >= 5) return (e * 100) / soc;
+      if (e !== null && e > 0 && soc !== null && soc >= 5) return (e * 100) / soc;
       if (c.capacity > 0) return c.capacity;
       return null;
     }
@@ -989,6 +1060,43 @@
       }
     }
 
+    _updateDetails() {
+      const c = this._config;
+      const h = this._hass;
+      const set = (key, html, cls) => {
+        const el = this.shadowRoot.getElementById(`tv-${key}`);
+        if (!el) return;
+        el.innerHTML = html;
+        el.closest(".tile").className = `tile t-${key}${cls ? ` ${cls}` : ""}`;
+      };
+      const kwh = (v) => (v === null ? "—" : `${v.toFixed(2)}<i>kWh</i>`);
+
+      const cap = this._capacityKwh();
+      const avail = num(h, c.energy_entity);
+      const chargeTot = num(h, c.charge_total_entity);
+      const dischTot = num(h, c.discharge_total_entity);
+
+      set("available", kwh(avail));
+      set("capacity", kwh(cap));
+
+      if (c.nominal_capacity > 0) {
+        const soh = cap !== null ? Math.round((cap / c.nominal_capacity) * 100) : null;
+        const cls = soh === null ? "" : soh >= 80 ? "good" : soh >= 60 ? "warn" : "crit";
+        set("health", soh === null ? "—" : `${Math.min(100, soh)}<i>%</i>`, cls);
+      }
+      if (c.discharge_total_entity) {
+        const cycles = dischTot !== null && cap ? Math.round(dischTot / cap) : null;
+        set("cycles", cycles === null ? "—" : `${cycles}`);
+      }
+      if (c.charge_total_entity && c.discharge_total_entity) {
+        const eff =
+          chargeTot !== null && chargeTot > 0 && dischTot !== null
+            ? Math.round((dischTot / chargeTot) * 100)
+            : null;
+        set("efficiency", eff === null ? "—" : `${eff}<i>%</i>`);
+      }
+    }
+
     /** Localized display label for a select option (raw value is sent to the service). */
     _optionLabel(option) {
       const key = `opt_${String(option).toLowerCase().replace(/[\s-]+/g, "_")}`;
@@ -1032,6 +1140,7 @@
       if (!this._config) return 4;
       if (this._config.compact) return 2;
       let size = 5;
+      if (this._config.show_details && this._detailKeys().length) size += 1;
       if (this._config.show_stats) size += 1;
       if (this._config.show_controls) size += 2;
       return size;
@@ -1183,6 +1292,34 @@
         .rd-arrow .ic { width: 13px; height: 13px; }
         .rd-arrow.a-in .ic { color: var(--zdc-l-ok); }
         .rd-arrow.a-out .ic { color: var(--zdc-home); }
+
+        /* ---------------- battery details tiles ---------------- */
+        .details {
+          display: grid; gap: 8px;
+          grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+          border-top: 1px solid var(--divider-color, color-mix(in srgb, currentColor 12%, transparent));
+          padding-top: 12px;
+        }
+        .tile {
+          display: flex; flex-direction: column; gap: 3px;
+          padding: 9px 11px; border-radius: 12px;
+          background: color-mix(in srgb, currentColor 5%, transparent);
+        }
+        .tile[data-more] { cursor: pointer; }
+        .tile[data-more]:focus-visible { outline: 2px solid var(--zdc-grid); outline-offset: 2px; }
+        .tile-l {
+          font-size: .68rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+          color: var(--secondary-text-color);
+        }
+        .tile-v {
+          font-size: 1.15rem; font-weight: 700; line-height: 1;
+          font-variant-numeric: tabular-nums; color: var(--primary-text-color);
+          display: inline-flex; align-items: baseline; gap: 2px;
+        }
+        .tile-v i { font-style: normal; font-size: .68rem; font-weight: 600; color: var(--secondary-text-color); }
+        .t-health.good .tile-v { color: var(--zdc-l-ok); }
+        .t-health.warn .tile-v { color: var(--zdc-l-warn); }
+        .t-health.crit .tile-v { color: var(--zdc-l-crit); }
 
         /* ---------------- compact ---------------- */
         .cbody { display: flex; flex-direction: column; gap: 10px; }
@@ -1340,6 +1477,7 @@
               type: "grid",
               schema: [
                 { name: "show_flow", selector: { boolean: {} } },
+                { name: "show_details", selector: { boolean: {} } },
                 { name: "show_stats", selector: { boolean: {} } },
                 { name: "show_controls", selector: { boolean: {} } },
                 { name: "compact", selector: { boolean: {} } },
@@ -1348,6 +1486,26 @@
             {
               name: "low_soc",
               selector: { number: { min: 5, max: 50, step: 5, mode: "slider", unit_of_measurement: "%" } },
+            },
+          ],
+        },
+        {
+          name: "",
+          type: "expandable",
+          title: t(this._hass, "ed_sec_battery"),
+          schema: [
+            { name: "capacity_entity", selector: entity("sensor") },
+            {
+              name: "nominal_capacity",
+              selector: { number: { min: 0, max: 100, step: 0.1, mode: "box", unit_of_measurement: "kWh" } },
+            },
+            {
+              name: "",
+              type: "grid",
+              schema: [
+                { name: "charge_total_entity", selector: entity("sensor") },
+                { name: "discharge_total_entity", selector: entity("sensor") },
+              ],
             },
             {
               name: "capacity",
@@ -1402,8 +1560,13 @@
         charge_entity: t(h, "ed_charge"),
         discharge_entity: t(h, "ed_discharge"),
         energy_entity: t(h, "ed_energy"),
+        capacity_entity: t(h, "ed_capacity_entity"),
+        nominal_capacity: t(h, "ed_nominal"),
+        charge_total_entity: t(h, "ed_charge_total"),
+        discharge_total_entity: t(h, "ed_discharge_total"),
         temp_entity: t(h, "ed_temp"),
         show_flow: t(h, "ed_show_flow"),
+        show_details: t(h, "ed_show_details"),
         show_stats: t(h, "ed_show_stats"),
         show_controls: t(h, "ed_show_controls"),
         compact: t(h, "ed_compact"),
@@ -1425,6 +1588,8 @@
         charge_entity: t(h, "ed_charge_helper"),
         discharge_entity: t(h, "ed_discharge_helper"),
         capacity: t(h, "ed_capacity_helper"),
+        nominal_capacity: t(h, "ed_nominal_helper"),
+        discharge_total_entity: t(h, "ed_discharge_total_helper"),
       };
     }
 
