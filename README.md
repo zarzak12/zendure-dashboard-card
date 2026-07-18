@@ -14,6 +14,10 @@ A modern, fully configurable Lovelace card to **monitor and control your Zendure
 - 🌊 **Living battery vessel** — a glass cell fills with animated liquid to the exact state of charge; waves speed up with power throughput, bubbles rise while charging, colour shifts green → amber → red as it drains
 - ⏱️ **Smart projection** — "Full in 2 h 15" / "Runtime 5 h 30", computed from net power and capacity (something no native HA card shows)
 - 🩺 **Battery details** — available energy, total capacity, **state of health**, **cycle count** and round-trip **efficiency**, computed from your sensors
+- 💶 **Savings & CO₂** — value of the energy the battery discharged (today / month / year) × your tariff, plus CO₂ avoided
+- ♻️ **Energy balance** — self-consumption and self-sufficiency gauges
+- 🎛️ **Guided manual charge / discharge** — one tap sets the manager to Off, flips the AC mode and shows the right power-limit slider (Force charge / Force discharge / Auto)
+- 🔀 **Reorderable sections** — arrange the layout from the editor with ▲/▼
 - 🎚️ **Manual power remote** — a ±max slider (bounded by your real charge/discharge limits) + Charge / Pause / Discharge buttons, shown in manual mode
 - 🧱 **Per-pack breakdown** — a mini-gauge for every stacked battery pack
 - 🔔 **Smart alerts** — low battery, offline, high temperature, charging below 0 °C, fault
@@ -111,6 +115,17 @@ switch_entities:
 | `alert_temp_max` | number | `50` | High-temperature alert threshold (°C) |
 | `show_alerts` | bool | `true` | Show the alerts banner |
 | `show_history` | bool | `true` | Show the 24 h battery-level graph |
+| `discharge_today_entity` / `discharge_month_entity` / `discharge_year_entity` | entity | — | Discharged energy (kWh) — feed the savings tiles |
+| `electricity_price` | number | `0.25` | Fixed €/kWh used for savings |
+| `price_entity` | entity | — | Dynamic €/kWh sensor (overrides the fixed price) |
+| `co2_factor` | number | `0.4` | kg CO₂ avoided per kWh |
+| `show_savings` | bool | `true` | Show the savings & CO₂ block |
+| `pv_today_entity` / `home_today_entity` / `grid_import_today_entity` / `grid_export_today_entity` | entity | — | Today's kWh — feed the self-consumption / self-sufficiency gauges |
+| `show_balance` | bool | `true` | Show the energy-balance block |
+| `ac_mode_entity` | entity | — | AC mode `select` (charge/discharge) for the guided manual panel |
+| `manager_auto_value` | string | `smart` | Value the "Auto" button returns the manager to |
+| `show_manual_flow` | bool | `false` | Show the guided manual charge/discharge panel |
+| `section_order` | list | see below | Order of the sections under the battery (editable via ▲/▼ in the editor) |
 | `temp_entity` | entity | — | Temperature chip in the statistics row |
 | `mode_entity` | entity | — | `select` entity rendered as segmented buttons |
 | `select_entities` | list | `[]` | Extra `select` entities rendered as segmented buttons (e.g. AC charge/discharge mode). Known option values (`input`, `output`, `smart`, `manual`, `off`) are translated automatically |
@@ -169,6 +184,10 @@ Une carte Lovelace moderne et entièrement paramétrable pour **surveiller et pi
 - 🌊 **Batterie-réservoir vivante** — une cuve en verre se remplit d'un liquide animé au niveau exact du SoC ; les vagues accélèrent avec la puissance, des bulles montent pendant la charge, la couleur passe vert → ambre → rouge en se vidant
 - ⏱️ **Projection intelligente** — « Pleine dans 2 h 15 » / « Autonomie 5 h 30 », calculée depuis la puissance nette et la capacité (ce qu'aucune carte HA native n'affiche)
 - 🩺 **Détails batterie** — énergie disponible, capacité totale, **état de santé**, **nombre de cycles** et **rendement**, calculés depuis vos capteurs
+- 💶 **Économies & CO₂** — valeur de l'énergie déchargée (jour / mois / année) × votre tarif, + CO₂ évité
+- ♻️ **Bilan énergie** — jauges d'autoconsommation et d'autonomie
+- 🎛️ **Charge / décharge manuelle guidée** — un clic met le manager sur Arrêt, bascule le mode AC et affiche le bon curseur de puissance (Forcer la charge / décharge / Auto)
+- 🔀 **Sections réorganisables** — agencez la mise en page depuis l'éditeur avec ▲/▼
 - 🎚️ **Télécommande manuelle** — un curseur ±max (borné par vos limites réelles de charge/décharge) + boutons Charge / Pause / Décharge, en mode manuel
 - 🧱 **Détail par pack** — une mini-jauge pour chaque batterie empilée
 - 🔔 **Alertes intelligentes** — batterie faible, hors-ligne, température élevée, charge sous 0 °C, défaut

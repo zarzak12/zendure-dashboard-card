@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.5.0 — 2026-07-18
+
+Priority-2 feature pack — the money argument:
+
+- **Savings & CO₂ block** — value of the energy the battery discharged
+  (today / this month / this year) × your tariff, plus CO₂ avoided.
+  Options: `discharge_today_entity`, `discharge_month_entity`,
+  `discharge_year_entity`, `electricity_price`, `price_entity` (dynamic),
+  `co2_factor`, `show_savings`
+- **Energy balance block** — self-consumption and self-sufficiency gauges
+  from today's solar / home / import / export. Options: `pv_today_entity`,
+  `home_today_entity`, `grid_import_today_entity`, `grid_export_today_entity`,
+  `show_balance`
+- **Guided manual charge / discharge panel** — one-tap Force charge / Force
+  discharge / Auto buttons that set the manager to Off, flip the AC mode and
+  reveal the matching power-limit slider. Options: `show_manual_flow`,
+  `ac_mode_entity`, `manager_auto_value`
+- **Reorderable sections** — drag-free ▲/▼ controls in the editor set
+  `section_order`; the card renders the sections below the battery in that order
+
 ## 1.4.0 — 2026-07-17
 
 - **Reworked liquid vessel** — the surface is now three layered waves whose

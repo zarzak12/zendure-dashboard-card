@@ -8,7 +8,7 @@
 (() => {
   "use strict";
 
-  const CARD_VERSION = "1.4.0";
+  const CARD_VERSION = "1.5.0";
   const CARD_TAG = "zendure-dashboard-card";
   const EDITOR_TAG = "zendure-dashboard-card-editor";
 
@@ -38,6 +38,29 @@
       det_health: "Health",
       det_cycles: "Cycles",
       det_efficiency: "Efficiency",
+      sav_title: "Savings",
+      sav_today: "Today",
+      sav_month: "This month",
+      sav_year: "This year",
+      sav_co2: "CO₂ avoided",
+      bal_title: "Energy balance",
+      bal_selfcons: "Self-consumption",
+      bal_selfsuff: "Self-sufficiency",
+      flow_title: "Manual charge / discharge",
+      flow_charge: "Force charge",
+      flow_discharge: "Force discharge",
+      flow_auto: "Auto (Smart)",
+      flow_hint_charge: "Charging — set the max charge power",
+      flow_hint_discharge: "Discharging — set the max output power",
+      sec_strip: "Power readouts",
+      sec_history: "24 h graph",
+      sec_details: "Battery details",
+      sec_balance: "Energy balance",
+      sec_savings: "Savings & CO₂",
+      sec_packs: "Battery packs",
+      sec_flow: "Manual charge / discharge",
+      sec_stats: "Statistics",
+      sec_controls: "Controls",
       temperature: "Temperature",
       controls: "Controls",
       stats: "Statistics",
@@ -107,6 +130,29 @@
       ed_connectivity_entity: "Connectivity entity (online/offline)",
       ed_fault_entity: "Fault entity (on = problem)",
       ed_show_history: "24 h battery-level graph",
+      ed_sec_savings: "Savings & tariff",
+      ed_show_savings: "Savings & CO₂ block",
+      ed_price: "Electricity price (€/kWh)",
+      ed_price_entity: "Dynamic price sensor (€/kWh)",
+      ed_price_helper: "Overrides the fixed price above when set.",
+      ed_discharge_today: "Discharged today (kWh)",
+      ed_discharge_month: "Discharged this month (kWh)",
+      ed_discharge_year: "Discharged this year (kWh)",
+      ed_savings_helper: "Savings = energy the battery discharged × price (grid import avoided).",
+      ed_co2_factor: "CO₂ factor (kg/kWh)",
+      ed_sec_balance: "Energy balance",
+      ed_show_balance: "Self-consumption / self-sufficiency block",
+      ed_pv_today: "Solar produced today (kWh)",
+      ed_home_today: "Home consumed today (kWh)",
+      ed_grid_import_today: "Grid imported today (kWh)",
+      ed_grid_export_today: "Grid exported today (kWh)",
+      ed_sec_flow: "Manual charge / discharge",
+      ed_show_manual_flow: "Guided charge/discharge panel",
+      ed_ac_mode_entity: "AC mode selector (charge / discharge)",
+      ed_manager_auto: "Return-to-auto value",
+      ed_section_order: "Section order",
+      ed_section_order_info: "Reorder the sections shown below the battery with ▲ / ▼.",
+      ed_flow_helper: "One-tap flow: sets the mode entity (manager) to Off, the AC selector to charge/discharge, and reveals the matching power-limit slider. “Auto” returns the manager to the value above.",
       ed_temp: "Temperature",
       ed_show_flow: "Power readouts (solar / home / grid)",
       ed_show_stats: "Statistics row",
@@ -143,6 +189,29 @@
       det_health: "Santé",
       det_cycles: "Cycles",
       det_efficiency: "Rendement",
+      sav_title: "Économies",
+      sav_today: "Aujourd'hui",
+      sav_month: "Ce mois",
+      sav_year: "Cette année",
+      sav_co2: "CO₂ évité",
+      bal_title: "Bilan énergie",
+      bal_selfcons: "Autoconsommation",
+      bal_selfsuff: "Autonomie",
+      flow_title: "Charge / décharge manuelle",
+      flow_charge: "Forcer la charge",
+      flow_discharge: "Forcer la décharge",
+      flow_auto: "Auto (Smart)",
+      flow_hint_charge: "En charge — règle la puissance de charge max",
+      flow_hint_discharge: "En décharge — règle la puissance de sortie max",
+      sec_strip: "Puissances",
+      sec_history: "Graphe 24 h",
+      sec_details: "Détails batterie",
+      sec_balance: "Bilan énergie",
+      sec_savings: "Économies & CO₂",
+      sec_packs: "Modules batterie",
+      sec_flow: "Charge / décharge manuelle",
+      sec_stats: "Statistiques",
+      sec_controls: "Contrôles",
       temperature: "Température",
       controls: "Contrôles",
       stats: "Statistiques",
@@ -212,6 +281,29 @@
       ed_connectivity_entity: "Entité de connectivité (en ligne/hors-ligne)",
       ed_fault_entity: "Entité de défaut (on = problème)",
       ed_show_history: "Graphe de niveau 24 h",
+      ed_sec_savings: "Économies & tarif",
+      ed_show_savings: "Bloc Économies & CO₂",
+      ed_price: "Prix de l'électricité (€/kWh)",
+      ed_price_entity: "Capteur de prix dynamique (€/kWh)",
+      ed_price_helper: "Remplace le prix fixe ci-dessus s'il est renseigné.",
+      ed_discharge_today: "Déchargé aujourd'hui (kWh)",
+      ed_discharge_month: "Déchargé ce mois (kWh)",
+      ed_discharge_year: "Déchargé cette année (kWh)",
+      ed_savings_helper: "Économies = énergie déchargée par la batterie × prix (import réseau évité).",
+      ed_co2_factor: "Facteur CO₂ (kg/kWh)",
+      ed_sec_balance: "Bilan énergie",
+      ed_show_balance: "Bloc autoconsommation / autonomie",
+      ed_pv_today: "Solaire produit aujourd'hui (kWh)",
+      ed_home_today: "Maison consommé aujourd'hui (kWh)",
+      ed_grid_import_today: "Réseau importé aujourd'hui (kWh)",
+      ed_grid_export_today: "Réseau exporté aujourd'hui (kWh)",
+      ed_sec_flow: "Charge / décharge manuelle",
+      ed_show_manual_flow: "Panneau de charge/décharge guidé",
+      ed_ac_mode_entity: "Sélecteur mode AC (charge / décharge)",
+      ed_manager_auto: "Valeur du retour en auto",
+      ed_section_order: "Ordre des sections",
+      ed_section_order_info: "Réorganisez les sections affichées sous la batterie avec ▲ / ▼.",
+      ed_flow_helper: "Séquence en un clic : met l'entité Mode (manager) sur Arrêt, le sélecteur AC sur charge/décharge, et affiche le curseur de puissance limite correspondant. « Auto » remet le manager sur la valeur ci-dessus.",
       ed_temp: "Température",
       ed_show_flow: "Puissances (solaire / maison / réseau)",
       ed_show_stats: "Ligne de statistiques",
@@ -382,6 +474,22 @@
     return `${new Intl.NumberFormat(lang, { maximumFractionDigits: 0 }).format(watts)} W`;
   }
 
+  function fmtMoney(hass, value) {
+    if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+    const lang = langOf(hass) === "fr" ? "fr-FR" : "en-US";
+    const digits = Math.abs(value) >= 100 ? 0 : Math.abs(value) >= 10 ? 1 : 2;
+    return `${new Intl.NumberFormat(lang, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value)} €`;
+  }
+
+  function fmtCo2(hass, kg) {
+    if (kg === null || kg === undefined || !Number.isFinite(kg)) return "—";
+    const lang = langOf(hass) === "fr" ? "fr-FR" : "en-US";
+    if (kg >= 1000) {
+      return `${new Intl.NumberFormat(lang, { maximumFractionDigits: 2 }).format(kg / 1000)} t`;
+    }
+    return `${new Intl.NumberFormat(lang, { maximumFractionDigits: 0 }).format(kg)} kg`;
+  }
+
   function fmtState(hass, eid) {
     const st = hass.states[eid];
     if (!st) return "—";
@@ -399,6 +507,19 @@
     el.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));
 
   const moreInfo = (el, entityId) => entityId && fire(el, "hass-more-info", { entityId });
+
+  /* Reorderable sections rendered below the battery hero (default order). */
+  const SECTIONS = [
+    "strip",
+    "history",
+    "details",
+    "balance",
+    "savings",
+    "packs",
+    "flow",
+    "stats",
+    "controls",
+  ];
 
   const DEFAULTS = {
     name: "",
@@ -422,6 +543,10 @@
     discharge_max_entity: "",
     manual_mode_value: "manual",
     invert_manual: false,
+    ac_mode_entity: "",
+    manager_auto_value: "smart",
+    show_manual_flow: false,
+    section_order: [...SECTIONS],
     min_soc_entity: "",
     max_soc_entity: "",
     pack_entities: [],
@@ -429,12 +554,24 @@
     fault_entity: "",
     stats_entities: [],
     switch_entities: [],
+    discharge_today_entity: "",
+    discharge_month_entity: "",
+    discharge_year_entity: "",
+    price_entity: "",
+    electricity_price: 0.25,
+    co2_factor: 0.4,
+    pv_today_entity: "",
+    home_today_entity: "",
+    grid_import_today_entity: "",
+    grid_export_today_entity: "",
     show_flow: true,
     show_stats: true,
     show_details: true,
     show_controls: true,
     show_alerts: true,
     show_history: true,
+    show_savings: true,
+    show_balance: true,
     compact: false,
     invert_battery: false,
     low_soc: 15,
@@ -511,6 +648,9 @@
         c.mode_entity, c.charge_limit_entity, c.discharge_limit_entity,
         c.manual_power_entity, c.charge_max_entity, c.discharge_max_entity,
         c.min_soc_entity, c.max_soc_entity, c.connectivity_entity, c.fault_entity,
+        c.discharge_today_entity, c.discharge_month_entity, c.discharge_year_entity,
+        c.price_entity, c.pv_today_entity, c.home_today_entity,
+        c.grid_import_today_entity, c.grid_export_today_entity, c.ac_mode_entity,
         ...(c.select_entities || []),
         ...(c.pack_entities || []),
         ...(c.stats_entities || []),
@@ -530,11 +670,11 @@
       const h = this._hass;
       this.toggleAttribute("dark", !!(h && h.themes && h.themes.darkMode));
 
-      const hasStrip =
-        c.show_flow && !c.compact &&
-        (c.solar_entity || c.home_entity || c.grid_entity);
-
       const configured = this._allEntities().length > 0;
+      const sections =
+        configured && !c.compact
+          ? this._orderedKeys().map((k) => this._sectionHtml(k)).join("")
+          : "";
 
       this.shadowRoot.innerHTML = `
         <style>${this._styles()}</style>
@@ -547,13 +687,9 @@
                 ? `<div class="empty">${svgIcon("battery")}<p>${t(h, "not_configured")}</p></div>`
                 : c.compact
                   ? this._compactHtml()
-                  : this._heroHtml() + (hasStrip ? this._stripHtml() : "")
+                  : this._heroHtml()
             }
-            ${configured && !c.compact && c.show_history && c.soc_entity ? this._historyHtml() : ""}
-            ${configured && !c.compact && c.show_details ? this._detailsHtml() : ""}
-            ${configured && !c.compact && (c.pack_entities || []).length ? this._packsHtml() : ""}
-            ${configured && !c.compact && c.show_stats ? this._statsHtml() : ""}
-            ${configured && !c.compact && c.show_controls ? this._controlsHtml() : ""}
+            ${sections}
           </div>
         </ha-card>
       `;
@@ -565,6 +701,50 @@
       this._update();
       this._startHistory();
       this._startWaves();
+    }
+
+    /** Configured section order, normalized: known keys only, any missing appended. */
+    _orderedKeys() {
+      const saved = Array.isArray(this._config.section_order) ? this._config.section_order : [];
+      const seen = new Set();
+      const out = [];
+      for (const k of saved) {
+        if (SECTIONS.includes(k) && !seen.has(k)) {
+          seen.add(k);
+          out.push(k);
+        }
+      }
+      for (const k of SECTIONS) if (!seen.has(k)) out.push(k);
+      return out;
+    }
+
+    /** HTML for a section key (respects show_* gates; returns "" when hidden). */
+    _sectionHtml(key) {
+      const c = this._config;
+      switch (key) {
+        case "strip":
+          return c.show_flow && (c.solar_entity || c.home_entity || c.grid_entity)
+            ? this._stripHtml()
+            : "";
+        case "history":
+          return c.show_history && c.soc_entity ? this._historyHtml() : "";
+        case "details":
+          return c.show_details ? this._detailsHtml() : "";
+        case "balance":
+          return c.show_balance ? this._balanceHtml() : "";
+        case "savings":
+          return c.show_savings ? this._savingsHtml() : "";
+        case "packs":
+          return (c.pack_entities || []).length ? this._packsHtml() : "";
+        case "flow":
+          return c.show_manual_flow ? this._flowHtml() : "";
+        case "stats":
+          return c.show_stats ? this._statsHtml() : "";
+        case "controls":
+          return c.show_controls ? this._controlsHtml() : "";
+        default:
+          return "";
+      }
     }
 
     _headerHtml() {
@@ -698,6 +878,94 @@
           <div class="sec-title">${t(h, "packs")}</div>
           <div class="pack-grid">${packs}</div>
         </section>`;
+    }
+
+    /** Which savings tiles are shown (a discharge counter must exist). */
+    _savingsKeys() {
+      const c = this._config;
+      const keys = [];
+      if (c.discharge_today_entity) keys.push("today");
+      if (c.discharge_month_entity) keys.push("month");
+      if (c.discharge_year_entity) keys.push("year");
+      const total = c.discharge_year_entity || c.discharge_total_entity;
+      if (total) keys.push("co2");
+      return keys;
+    }
+
+    _savingsHtml() {
+      const h = this._hass;
+      const keys = this._savingsKeys();
+      if (!keys.length) return "";
+      const tiles = keys
+        .map(
+          (k) => `
+          <div class="tile t-sav">
+            <span class="tile-l">${t(h, `sav_${k}`)}</span>
+            <span class="tile-v" id="sv-${k}">—</span>
+          </div>`
+        )
+        .join("");
+      return `
+        <section class="savings">
+          <div class="sec-title">${t(h, "sav_title")}</div>
+          <div class="details">${tiles}</div>
+        </section>`;
+    }
+
+    /** Balance shown when we can compute at least one of the two rates. */
+    _balanceAvail() {
+      const c = this._config;
+      return {
+        cons: !!(c.pv_today_entity && c.grid_export_today_entity),
+        suff: !!(c.home_today_entity && c.grid_import_today_entity),
+      };
+    }
+
+    _balanceHtml() {
+      const h = this._hass;
+      const a = this._balanceAvail();
+      if (!a.cons && !a.suff) return "";
+      const gauge = (key, label) => `
+        <div class="gauge" id="g-${key}">
+          <div class="gauge-ring" id="gr-${key}">
+            <div class="gauge-in"><span class="gauge-v" id="gv-${key}">—</span></div>
+          </div>
+          <span class="gauge-l">${label}</span>
+        </div>`;
+      const parts = [];
+      if (a.cons) parts.push(gauge("cons", t(h, "bal_selfcons")));
+      if (a.suff) parts.push(gauge("suff", t(h, "bal_selfsuff")));
+      return `
+        <section class="balance">
+          <div class="sec-title">${t(h, "bal_title")}</div>
+          <div class="gauge-row">${parts.join("")}</div>
+        </section>`;
+    }
+
+    _flowHtml() {
+      const c = this._config;
+      const h = this._hass;
+      if (!c.mode_entity || !c.ac_mode_entity) return "";
+      return `
+        <section class="mflow">
+          <div class="sec-title">${t(h, "flow_title")}</div>
+          <div class="mflow-btns">
+            <button class="mfb mfb-cha" data-flow="charge">${svgIcon("down")}${t(h, "flow_charge")}</button>
+            <button class="mfb mfb-dis" data-flow="discharge">${svgIcon("up")}${t(h, "flow_discharge")}</button>
+            <button class="mfb mfb-auto" data-flow="auto">${svgIcon("flash")}${t(h, "flow_auto")}</button>
+          </div>
+          <div class="mflow-slider" id="mflow-slider" style="display:none">
+            <span class="ctl-l"><span id="mflow-hint"></span><b class="ctl-v" id="mflow-val">—</b></span>
+            <input type="range" id="sl-flow" data-kind="flow" min="0" max="100" step="1">
+          </div>
+        </section>`;
+    }
+
+    /** First option of a select matching `re`, else `fallback`. */
+    _pickOption(eid, re, fallback) {
+      const st = this._hass.states[eid];
+      const opts = (st && st.attributes.options) || [];
+      return opts.find((o) => re.test(o)) || fallback;
     }
 
     _compactHtml() {
@@ -867,8 +1135,8 @@
         chip.addEventListener("click", () => moreInfo(this, chip.dataset.entity));
       });
 
-      // Plain number sliders (limits, reserve/ceiling). Manual power is handled apart.
-      root.querySelectorAll("input[type=range]:not([data-kind=manual])").forEach((sl) => {
+      // Plain number sliders (limits, reserve/ceiling). Manual power & flow are apart.
+      root.querySelectorAll("input[type=range]:not([data-kind])").forEach((sl) => {
         const eid = sl.dataset.entity;
         const label = sl.closest(".ctl").querySelector(".ctl-v");
         sl.addEventListener("input", () => {
@@ -902,6 +1170,30 @@
             const b = this._manualBounds();
             const net = kind === "charge" ? b.max : kind === "discharge" ? b.min : 0;
             this._setManualPower(net);
+          });
+        });
+      }
+
+      // Guided charge/discharge flow: action buttons + contextual limit slider.
+      root.querySelectorAll(".mfb").forEach((btn) => {
+        btn.addEventListener("click", () => this._doFlow(btn.dataset.flow));
+      });
+      const fsl = root.getElementById("sl-flow");
+      if (fsl) {
+        const label = root.getElementById("mflow-val");
+        fsl.addEventListener("input", () => {
+          const eid = this._flowLimitEid;
+          if (!eid) return;
+          this._sliderDrag[eid] = true;
+          if (label) label.textContent = this._fmtNumber(eid, fsl.value);
+        });
+        fsl.addEventListener("change", () => {
+          const eid = this._flowLimitEid;
+          if (!eid) return;
+          delete this._sliderDrag[eid];
+          this._hass.callService("number", "set_value", {
+            entity_id: eid,
+            value: Number(fsl.value),
           });
         });
       }
@@ -1150,6 +1442,8 @@
       // Battery details tiles + stacked packs
       this._updateDetails();
       this._updatePacks();
+      this._updateSavings();
+      this._updateBalance();
 
       // Alerts banner
       this._updateAlerts(soc, net, statusKey);
@@ -1162,9 +1456,10 @@
         el.textContent = this._cleanLabel(el.dataset.name);
       });
 
-      // Mode segmented controls + manual power
+      // Mode segmented controls + manual power + guided flow
       this._updateSelects();
       this._updateManual();
+      this._updateManualFlow();
 
       // Sliders
       for (const [key, eid] of [
@@ -1222,6 +1517,141 @@
           ff.style.background = `var(--zdc-l-${lvl})`;
         }
       });
+    }
+
+    /** Current €/kWh price: dynamic sensor if set, else the fixed price. */
+    _price() {
+      const c = this._config;
+      const p = num(this._hass, c.price_entity);
+      return p !== null && p >= 0 ? p : c.electricity_price;
+    }
+
+    _updateSavings() {
+      const c = this._config;
+      const h = this._hass;
+      if (!this.shadowRoot.getElementById("sv-today") &&
+          !this.shadowRoot.getElementById("sv-month") &&
+          !this.shadowRoot.getElementById("sv-year") &&
+          !this.shadowRoot.getElementById("sv-co2")) return;
+      const price = this._price();
+      const money = (eid) => {
+        const kwh = num(h, eid);
+        return kwh === null ? "—" : fmtMoney(h, kwh * price);
+      };
+      const setTxt = (id, txt) => {
+        const el = this.shadowRoot.getElementById(id);
+        if (el) el.textContent = txt;
+      };
+      setTxt("sv-today", money(c.discharge_today_entity));
+      setTxt("sv-month", money(c.discharge_month_entity));
+      setTxt("sv-year", money(c.discharge_year_entity));
+      const totalKwh = num(h, c.discharge_year_entity || c.discharge_total_entity);
+      setTxt("sv-co2", totalKwh === null ? "—" : fmtCo2(h, totalKwh * c.co2_factor));
+    }
+
+    _updateBalance() {
+      const c = this._config;
+      const h = this._hass;
+      const setGauge = (key, pct) => {
+        const ring = this.shadowRoot.getElementById(`gr-${key}`);
+        const v = this.shadowRoot.getElementById(`gv-${key}`);
+        if (!ring) return;
+        if (pct === null) {
+          ring.style.background = "var(--zdc-track)";
+          if (v) v.textContent = "—";
+          return;
+        }
+        const p = Math.max(0, Math.min(100, pct));
+        const col = p >= 70 ? "var(--zdc-l-ok)" : p >= 40 ? "var(--zdc-l-warn)" : "var(--zdc-l-crit)";
+        ring.style.background = `conic-gradient(${col} ${p}%, var(--zdc-track) 0)`;
+        if (v) v.innerHTML = `${Math.round(p)}<i>%</i>`;
+      };
+      // Self-consumption = (produced − exported) / produced
+      const pv = num(h, c.pv_today_entity);
+      const exp = num(h, c.grid_export_today_entity);
+      let cons = null;
+      if (pv !== null && exp !== null && pv > 0) cons = ((pv - exp) / pv) * 100;
+      // Self-sufficiency = (consumed − imported) / consumed
+      const home = num(h, c.home_today_entity);
+      const imp = num(h, c.grid_import_today_entity);
+      let suff = null;
+      if (home !== null && imp !== null && home > 0) suff = ((home - imp) / home) * 100;
+      setGauge("cons", cons);
+      setGauge("suff", suff);
+    }
+
+    /** Resolve the manager/AC option values used by the guided flow. */
+    _flowVals() {
+      const c = this._config;
+      return {
+        off: this._pickOption(c.mode_entity, /^off$|arr[eê]t|stop|éteint|eteint/i, "off"),
+        auto: c.manager_auto_value || "smart",
+        charge: this._pickOption(c.ac_mode_entity, /input|charge|charg/i, "input"),
+        discharge: this._pickOption(c.ac_mode_entity, /output|discharge|d[eé]charg/i, "output"),
+      };
+    }
+
+    _doFlow(kind) {
+      const c = this._config;
+      const h = this._hass;
+      const v = this._flowVals();
+      if (kind === "auto") {
+        h.callService("select", "select_option", { entity_id: c.mode_entity, option: v.auto });
+        return;
+      }
+      // Manual recipe: stop the manager, then pick the AC direction.
+      h.callService("select", "select_option", { entity_id: c.mode_entity, option: v.off });
+      h.callService("select", "select_option", {
+        entity_id: c.ac_mode_entity,
+        option: kind === "charge" ? v.charge : v.discharge,
+      });
+    }
+
+    _updateManualFlow() {
+      const c = this._config;
+      const h = this._hass;
+      const sec = this.shadowRoot.querySelector(".mflow");
+      if (!sec) return;
+      const mgr = h.states[c.mode_entity];
+      const ac = h.states[c.ac_mode_entity];
+      if (!mgr || !ac) return;
+      const v = this._flowVals();
+      const isOff = String(mgr.state) === String(v.off);
+      const charging = isOff && String(ac.state) === String(v.charge);
+      const discharging = isOff && String(ac.state) === String(v.discharge);
+      sec.querySelector(".mfb-cha").classList.toggle("on", charging);
+      sec.querySelector(".mfb-dis").classList.toggle("on", discharging);
+      sec.querySelector(".mfb-auto").classList.toggle("on", !isOff);
+
+      const wrap = this.shadowRoot.getElementById("mflow-slider");
+      const sl = this.shadowRoot.getElementById("sl-flow");
+      const hint = this.shadowRoot.getElementById("mflow-hint");
+      const val = this.shadowRoot.getElementById("mflow-val");
+      let eid = null;
+      let label = "";
+      if (charging && c.charge_limit_entity) {
+        eid = c.charge_limit_entity;
+        label = t(h, "flow_hint_charge");
+      } else if (discharging && c.discharge_limit_entity) {
+        eid = c.discharge_limit_entity;
+        label = t(h, "flow_hint_discharge");
+      }
+      this._flowLimitEid = eid;
+      if (eid && h.states[eid]) {
+        wrap.style.display = "";
+        const st = h.states[eid];
+        sl.min = Number(st.attributes.min ?? 0);
+        sl.max = Number(st.attributes.max ?? 100);
+        sl.step = Number(st.attributes.step ?? 1);
+        if (hint) hint.textContent = `${label} `;
+        const n = num(h, eid);
+        if (n !== null && !this._sliderDrag[eid]) {
+          sl.value = n;
+          if (val) val.textContent = this._fmtNumber(eid, n);
+        }
+      } else {
+        wrap.style.display = "none";
+      }
     }
 
     _updateManual() {
@@ -1520,11 +1950,15 @@
     /* ------------------------------ sizing ------------------------------ */
     getCardSize() {
       if (!this._config) return 4;
-      if (this._config.compact) return 2;
+      const c = this._config;
+      if (c.compact) return 2;
       let size = 5;
-      if (this._config.show_details && this._detailKeys().length) size += 1;
-      if (this._config.show_stats) size += 1;
-      if (this._config.show_controls) size += 2;
+      if (c.show_details && this._detailKeys().length) size += 1;
+      if (c.show_balance && (c.pv_today_entity || c.home_today_entity)) size += 2;
+      if (c.show_savings && this._savingsKeys().length) size += 1;
+      if (c.show_manual_flow && c.mode_entity && c.ac_mode_entity) size += 1;
+      if (c.show_stats) size += 1;
+      if (c.show_controls) size += 2;
       return size;
     }
 
@@ -1722,6 +2156,50 @@
         .t-health.good .tile-v { color: var(--zdc-l-ok); }
         .t-health.warn .tile-v { color: var(--zdc-l-warn); }
         .t-health.crit .tile-v { color: var(--zdc-l-crit); }
+        .t-sav .tile-v { color: var(--zdc-l-ok); }
+
+        /* ---------------- savings & balance sections ---------------- */
+        .savings, .balance {
+          border-top: 1px solid var(--divider-color, color-mix(in srgb, currentColor 12%, transparent));
+          padding-top: 12px;
+        }
+        .gauge-row { display: flex; gap: 18px; justify-content: space-around; flex-wrap: wrap; }
+        .gauge { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .gauge-ring {
+          width: 84px; height: 84px; border-radius: 50%;
+          background: var(--zdc-track);
+          display: flex; align-items: center; justify-content: center;
+          transition: background .6s;
+        }
+        .gauge-in {
+          width: 66px; height: 66px; border-radius: 50%;
+          background: var(--zdc-card-bg);
+          display: flex; align-items: center; justify-content: center;
+        }
+        .gauge-v { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .gauge-v i { font-style: normal; font-size: .7rem; font-weight: 600; color: var(--secondary-text-color); }
+        .gauge-l { font-size: .78rem; color: var(--secondary-text-color); text-align: center; }
+
+        /* ---------------- guided manual charge/discharge ---------------- */
+        .mflow {
+          border-top: 1px solid var(--divider-color, color-mix(in srgb, currentColor 12%, transparent));
+          padding-top: 12px;
+        }
+        .mflow-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .mfb {
+          display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+          padding: 10px 8px; border-radius: 10px; cursor: pointer; font: inherit;
+          font-size: .8rem; font-weight: 600;
+          border: 1px solid var(--divider-color, color-mix(in srgb, currentColor 15%, transparent));
+          background: none; color: var(--primary-text-color);
+          transition: background .2s, border-color .2s, color .2s;
+        }
+        .mfb .ic { width: 15px; height: 15px; }
+        .mfb:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
+        .mfb-cha.on { background: var(--zdc-l-ok); border-color: var(--zdc-l-ok); color: #fff; }
+        .mfb-dis.on { background: var(--zdc-home); border-color: var(--zdc-home); color: #fff; }
+        .mfb-auto.on { background: var(--primary-color, var(--zdc-grid)); border-color: var(--primary-color, var(--zdc-grid)); color: var(--text-primary-color, #fff); }
+        .mflow-slider { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 
         /* ---------------- alerts banner ---------------- */
         .alerts { display: flex; flex-direction: column; gap: 6px; }
@@ -1945,7 +2423,10 @@
                 { name: "show_flow", selector: { boolean: {} } },
                 { name: "show_history", selector: { boolean: {} } },
                 { name: "show_details", selector: { boolean: {} } },
+                { name: "show_balance", selector: { boolean: {} } },
+                { name: "show_savings", selector: { boolean: {} } },
                 { name: "show_alerts", selector: { boolean: {} } },
+                { name: "show_manual_flow", selector: { boolean: {} } },
                 { name: "show_stats", selector: { boolean: {} } },
                 { name: "show_controls", selector: { boolean: {} } },
                 { name: "compact", selector: { boolean: {} } },
@@ -2023,10 +2504,61 @@
         {
           name: "",
           type: "expandable",
+          title: t(this._hass, "ed_sec_savings"),
+          schema: [
+            {
+              name: "",
+              type: "grid",
+              schema: [
+                { name: "electricity_price", selector: { number: { min: 0, max: 5, step: 0.001, mode: "box", unit_of_measurement: "€/kWh" } } },
+                { name: "price_entity", selector: entity("sensor") },
+              ],
+            },
+            {
+              name: "",
+              type: "grid",
+              schema: [
+                { name: "discharge_today_entity", selector: entity("sensor") },
+                { name: "discharge_month_entity", selector: entity("sensor") },
+                { name: "discharge_year_entity", selector: entity("sensor") },
+                { name: "co2_factor", selector: { number: { min: 0, max: 1, step: 0.01, mode: "box", unit_of_measurement: "kg/kWh" } } },
+              ],
+            },
+          ],
+        },
+        {
+          name: "",
+          type: "expandable",
+          title: t(this._hass, "ed_sec_balance"),
+          schema: [
+            {
+              name: "",
+              type: "grid",
+              schema: [
+                { name: "pv_today_entity", selector: entity("sensor") },
+                { name: "grid_export_today_entity", selector: entity("sensor") },
+                { name: "home_today_entity", selector: entity("sensor") },
+                { name: "grid_import_today_entity", selector: entity("sensor") },
+              ],
+            },
+          ],
+        },
+        {
+          name: "",
+          type: "expandable",
           title: t(this._hass, "ed_sec_stats"),
           schema: [
             { name: "temp_entity", selector: entity("sensor") },
             { name: "stats_entities", selector: { entity: { multiple: true } } },
+          ],
+        },
+        {
+          name: "",
+          type: "expandable",
+          title: t(this._hass, "ed_sec_flow"),
+          schema: [
+            { name: "ac_mode_entity", selector: entity("select") },
+            { name: "manager_auto_value", selector: { text: {} } },
           ],
         },
         {
@@ -2078,6 +2610,21 @@
         show_flow: t(h, "ed_show_flow"),
         show_history: t(h, "ed_show_history"),
         show_details: t(h, "ed_show_details"),
+        show_balance: t(h, "ed_show_balance"),
+        show_savings: t(h, "ed_show_savings"),
+        electricity_price: t(h, "ed_price"),
+        price_entity: t(h, "ed_price_entity"),
+        discharge_today_entity: t(h, "ed_discharge_today"),
+        discharge_month_entity: t(h, "ed_discharge_month"),
+        discharge_year_entity: t(h, "ed_discharge_year"),
+        co2_factor: t(h, "ed_co2_factor"),
+        pv_today_entity: t(h, "ed_pv_today"),
+        home_today_entity: t(h, "ed_home_today"),
+        grid_import_today_entity: t(h, "ed_grid_import_today"),
+        grid_export_today_entity: t(h, "ed_grid_export_today"),
+        ac_mode_entity: t(h, "ed_ac_mode_entity"),
+        manager_auto_value: t(h, "ed_manager_auto"),
+        show_manual_flow: t(h, "ed_show_manual_flow"),
         show_alerts: t(h, "ed_show_alerts"),
         show_stats: t(h, "ed_show_stats"),
         show_controls: t(h, "ed_show_controls"),
@@ -2112,6 +2659,9 @@
         discharge_total_entity: t(h, "ed_discharge_total_helper"),
         pack_entities: t(h, "ed_pack_helper"),
         manual_mode_value: t(h, "ed_manual_mode_helper"),
+        price_entity: t(h, "ed_price_helper"),
+        discharge_today_entity: t(h, "ed_savings_helper"),
+        ac_mode_entity: t(h, "ed_flow_helper"),
       };
     }
 
@@ -2131,6 +2681,24 @@
               color: var(--primary-text-color); cursor: pointer;
             }
             .devrow .none { font-size: .8rem; color: var(--secondary-text-color); font-style: italic; }
+            .secorder-wrap { display: flex; flex-direction: column; gap: 6px; }
+            .secorder-title { font-size: .95rem; font-weight: 600; color: var(--primary-text-color); }
+            .secorder-hint { font-size: .8rem; color: var(--secondary-text-color); }
+            .sec-row {
+              display: flex; align-items: center; justify-content: space-between; gap: 8px;
+              padding: 8px 12px; border-radius: 8px;
+              border: 1px solid var(--divider-color, #ccc);
+              background: var(--card-background-color, #fff);
+            }
+            .sec-row.off { opacity: .5; }
+            .sec-name { font-size: .88rem; }
+            .sec-arrows { display: inline-flex; gap: 4px; }
+            .sec-arrows button {
+              width: 30px; height: 30px; border-radius: 6px; cursor: pointer;
+              border: 1px solid var(--divider-color, #ccc);
+              background: none; color: var(--primary-text-color); font-size: .9rem;
+            }
+            .sec-arrows button:disabled { opacity: .3; cursor: default; }
           </style>
           <div class="ed">
             <div class="devrow">
@@ -2139,8 +2707,19 @@
               <span class="none" id="dev-none" style="display:none"></span>
             </div>
             <ha-form id="form"></ha-form>
+            <div class="secorder-wrap">
+              <span class="secorder-title" id="secorder-title"></span>
+              <span class="secorder-hint" id="secorder-hint"></span>
+              <div id="secorder"></div>
+            </div>
           </div>
         `;
+        this.shadowRoot.getElementById("secorder").addEventListener("click", (ev) => {
+          const btn = ev.target.closest("button[data-dir]");
+          if (!btn) return;
+          const row = btn.closest(".sec-row");
+          this._moveSection(row.dataset.key, btn.dataset.dir);
+        });
         this.shadowRoot.getElementById("dev").addEventListener("change", (ev) => {
           const prefix = ev.target.value;
           if (!prefix || !this._devices || !this._devices[prefix]) return;
@@ -2198,6 +2777,53 @@
           fire(this, "config-changed", { config: this._cleaned(this._config) });
         });
       }
+
+      this._renderSectionOrder();
+    }
+
+    _normalizedOrder() {
+      const saved = Array.isArray(this._config.section_order) ? this._config.section_order : [];
+      const seen = new Set();
+      const out = [];
+      for (const k of saved) {
+        if (SECTIONS.includes(k) && !seen.has(k)) {
+          seen.add(k);
+          out.push(k);
+        }
+      }
+      for (const k of SECTIONS) if (!seen.has(k)) out.push(k);
+      return out;
+    }
+
+    _renderSectionOrder() {
+      const h = this._hass;
+      this.shadowRoot.getElementById("secorder-title").textContent = t(h, "ed_section_order");
+      this.shadowRoot.getElementById("secorder-hint").textContent = t(h, "ed_section_order_info");
+      const order = this._normalizedOrder();
+      const last = order.length - 1;
+      this.shadowRoot.getElementById("secorder").innerHTML = order
+        .map(
+          (key, i) => `
+          <div class="sec-row" data-key="${key}">
+            <span class="sec-name">${t(h, `sec_${key}`)}</span>
+            <span class="sec-arrows">
+              <button data-dir="up" ${i === 0 ? "disabled" : ""} aria-label="up">▲</button>
+              <button data-dir="down" ${i === last ? "disabled" : ""} aria-label="down">▼</button>
+            </span>
+          </div>`
+        )
+        .join("");
+    }
+
+    _moveSection(key, dir) {
+      const order = this._normalizedOrder();
+      const i = order.indexOf(key);
+      const j = dir === "up" ? i - 1 : i + 1;
+      if (i < 0 || j < 0 || j >= order.length) return;
+      [order[i], order[j]] = [order[j], order[i]];
+      this._config = { ...this._config, section_order: order };
+      fire(this, "config-changed", { config: this._cleaned(this._config) });
+      this._renderSectionOrder();
     }
 
     /** Strip empty values so the stored YAML stays clean. */
