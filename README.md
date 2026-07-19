@@ -10,7 +10,7 @@ A modern, fully configurable Lovelace card to **monitor and control your Zendure
 
 🇫🇷 **[Documentation en français plus bas](#-documentation-en-français)**
 
-![Card preview](docs/preview.png)
+<p align="center"><img src="docs/preview.jpg" alt="Zendure Dashboard Card preview" width="380"></p>
 
 ## Features
 
