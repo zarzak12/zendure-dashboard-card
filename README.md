@@ -2,8 +2,11 @@
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/zarzak12/zendure-dashboard-card)](https://github.com/zarzak12/zendure-dashboard-card/releases)
 
 A modern, fully configurable Lovelace card to **monitor and control your Zendure batteries** (SolarFlow, Hyper 2000, Hub, AIO, Ace, SuperBase…) from Home Assistant.
+
+[![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=zarzak12&repository=zendure-dashboard-card&category=plugin)
 
 🇫🇷 **[Documentation en français plus bas](#-documentation-en-français)**
 
@@ -36,21 +39,32 @@ Works with the [Zendure Home Assistant integration](https://github.com/Zendure/Z
 
 ## Installation
 
-### Via HACS (recommended)
+### Method 1 — One-click via HACS (easiest)
 
-1. Open **HACS** in Home Assistant
-2. Menu (⋮) → **Custom repositories**
-3. Add this repository URL, category **Dashboard** (or *Lovelace/Plugin* on older HACS)
-4. Search for **Zendure Dashboard Card** and download it
-5. Reload your browser (Ctrl+F5)
+[![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=zarzak12&repository=zendure-dashboard-card&category=plugin)
 
-### Manual
+1. Click the button above → it opens **HACS** on this repository (approve adding it as a custom repository if asked).
+2. Click **Download**, then **reload your browser** (Ctrl+F5).
 
-1. Download `zendure-dashboard-card.js` from the [latest release](../../releases)
-2. Copy it to `config/www/`
-3. **Settings → Dashboards → ⋮ → Resources → Add resource**:
+> [!NOTE]
+> Requires [HACS](https://hacs.xyz) to be installed. The button uses [My Home Assistant](https://my.home-assistant.io) — the first time, you may need to set your instance URL.
+
+### Method 2 — HACS custom repository (manual add)
+
+1. Open **HACS** → menu (⋮) → **Custom repositories**.
+2. Repository: `https://github.com/zarzak12/zendure-dashboard-card` — Category: **Dashboard** (*Lovelace / Plugin* on older HACS).
+3. Search for **Zendure Dashboard Card**, **Download**, then reload the browser (Ctrl+F5).
+
+### Method 3 — Manual (without HACS)
+
+1. Download `zendure-dashboard-card.js` from the [latest release](https://github.com/zarzak12/zendure-dashboard-card/releases/latest).
+2. Copy it to `config/www/` (create the folder if needed).
+3. **Settings → Dashboards → ⋮ → Resources → + Add resource**:
    - URL: `/local/zendure-dashboard-card.js`
    - Type: **JavaScript module**
+4. Reload the browser (Ctrl+F5).
+
+> With Methods 1 & 2, HACS adds the dashboard resource automatically. Only Method 3 needs the manual resource step above.
 
 ## Usage
 
@@ -204,21 +218,32 @@ Une carte Lovelace moderne et entièrement paramétrable pour **surveiller et pi
 
 ## Installation
 
-### Via HACS (recommandé)
+### Méthode 1 — En un clic via HACS (le plus simple)
 
-1. Ouvrez **HACS** dans Home Assistant
-2. Menu (⋮) → **Dépôts personnalisés**
-3. Ajoutez l'URL de ce dépôt, catégorie **Dashboard** (ou *Lovelace/Plugin* sur les anciennes versions)
-4. Recherchez **Zendure Dashboard Card** et téléchargez-la
-5. Rechargez votre navigateur (Ctrl+F5)
+[![Ouvrez votre instance Home Assistant et affichez ce dépôt dans le Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=zarzak12&repository=zendure-dashboard-card&category=plugin)
 
-### Manuelle
+1. Cliquez sur le bouton ci-dessus → **HACS** s'ouvre sur ce dépôt (acceptez l'ajout en dépôt personnalisé si demandé).
+2. Cliquez sur **Télécharger**, puis **rechargez le navigateur** (Ctrl+F5).
 
-1. Téléchargez `zendure-dashboard-card.js` depuis la [dernière release](../../releases)
-2. Copiez-le dans `config/www/`
-3. **Paramètres → Tableaux de bord → ⋮ → Ressources → Ajouter une ressource** :
+> [!NOTE]
+> Nécessite [HACS](https://hacs.xyz) installé. Le bouton utilise [My Home Assistant](https://my.home-assistant.io) — la première fois, il faudra peut-être indiquer l'URL de votre instance.
+
+### Méthode 2 — Dépôt personnalisé HACS (ajout manuel)
+
+1. Ouvrez **HACS** → menu (⋮) → **Dépôts personnalisés**.
+2. Dépôt : `https://github.com/zarzak12/zendure-dashboard-card` — Catégorie : **Dashboard** (*Lovelace / Plugin* sur les anciennes versions).
+3. Recherchez **Zendure Dashboard Card**, **Téléchargez**, puis rechargez le navigateur (Ctrl+F5).
+
+### Méthode 3 — Manuelle (sans HACS)
+
+1. Téléchargez `zendure-dashboard-card.js` depuis la [dernière release](https://github.com/zarzak12/zendure-dashboard-card/releases/latest).
+2. Copiez-le dans `config/www/` (créez le dossier si besoin).
+3. **Paramètres → Tableaux de bord → ⋮ → Ressources → + Ajouter une ressource** :
    - URL : `/local/zendure-dashboard-card.js`
    - Type : **Module JavaScript**
+4. Rechargez le navigateur (Ctrl+F5).
+
+> Avec les méthodes 1 & 2, HACS ajoute la ressource automatiquement. Seule la méthode 3 nécessite l'étape manuelle ci-dessus.
 
 ## Utilisation
 
