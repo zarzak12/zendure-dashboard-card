@@ -1,5 +1,5 @@
 /*!
- * Zendure Dashboard Card v1.5.0
+ * Zendure Dashboard Card v1.5.1
  * https://github.com/zarzak12/zendure-dashboard-card — MIT License
  */
 ﻿/*!
@@ -12,7 +12,7 @@
 (() => {
   "use strict";
 
-  const CARD_VERSION = "1.5.0";
+  const CARD_VERSION = "1.5.1";
   const CARD_TAG = "zendure-dashboard-card";
   const EDITOR_TAG = "zendure-dashboard-card-editor";
 
@@ -358,20 +358,36 @@
   /* ------------------------------------------------------------------ *
    *  Zendure device auto-detection                                     *
    * ------------------------------------------------------------------ */
-  const SUFFIX_MAP = {
-    soc_entity: "electriclevel",
-    solar_entity: "solarinputpower",
-    charge_entity: "outputpackpower",
-    discharge_entity: "packinputpower",
-    home_entity: "outputhomepower",
-    grid_entity: "gridinputpower",
+  // Normalize an id by dropping separators/case so snake_case (output_pack_power)
+  // and camelCase (outputPackPower) both compare equal.
+  const norm = (s) => String(s).replace(/[_\s-]+/g, "").toLowerCase();
+
+  // role → normalized suffix variants (covers both the legacy and the current
+  // official Zendure-HA naming for Hyper 2000 / SolarFlow / Hub / Ace…).
+  const ROLE_SUFFIXES = {
+    soc_entity: ["electriclevel", "globalsoc", "batterylevel", "stateofcharge"],
+    solar_entity: ["solarinputpower", "solarpower", "pvinputpower", "pvpower"],
+    charge_entity: ["outputpackpower", "packoutputpower"],
+    discharge_entity: ["packinputpower", "inputpackpower"],
+    home_entity: ["outputhomepower", "homeoutputpower"],
+    grid_entity: ["gridinputpower", "gridpower"],
   };
 
   function prettify(id) {
-    return id
+    return String(id)
       .replace(/[_-]+/g, " ")
       .replace(/\b\w/g, (c) => c.toUpperCase())
       .trim();
+  }
+
+  /** Original device prefix from a sample object_id and its normalized prefix. */
+  function reconstructPrefix(sampleObj, prefixN) {
+    let count = 0;
+    let i = 0;
+    for (; i < sampleObj.length && count < prefixN.length; i++) {
+      if (!/[_\s-]/.test(sampleObj[i])) count++;
+    }
+    return sampleObj.slice(0, i).replace(/[_-]+$/, "");
   }
 
   function fmtDuration(hrs) {
@@ -388,48 +404,61 @@
     const devices = {};
     if (!hass || !hass.states) return devices;
 
+    // Pass 1 — match core power / SoC sensors, group by normalized device prefix.
     for (const eid of Object.keys(hass.states)) {
       const dot = eid.indexOf(".");
-      const domain = eid.slice(0, dot);
-      const obj = eid.slice(dot + 1).toLowerCase();
-      if (domain !== "sensor") continue;
-      for (const key of Object.keys(SUFFIX_MAP)) {
-        const suf = SUFFIX_MAP[key];
-        if (obj.endsWith(suf)) {
-          const prefix = obj.slice(0, obj.length - suf.length).replace(/[_-]+$/, "");
-          if (!devices[prefix]) devices[prefix] = { __prefix: prefix };
-          if (!devices[prefix][key]) devices[prefix][key] = eid;
-        }
+      if (eid.slice(0, dot) !== "sensor") continue;
+      const obj = eid.slice(dot + 1);
+      const objN = norm(obj);
+      for (const [role, sufs] of Object.entries(ROLE_SUFFIXES)) {
+        const suf = sufs.find((s) => objN.endsWith(s));
+        if (!suf) continue;
+        const prefixN = objN.slice(0, objN.length - suf.length);
+        if (!prefixN) break;
+        if (!devices[prefixN]) devices[prefixN] = { __prefix: prefixN, __sample: obj };
+        if (!devices[prefixN][role]) devices[prefixN][role] = eid;
+        break; // one role per sensor
       }
     }
 
-    // Keep only credible devices (at least a SoC or two matched power sensors)
     for (const p of Object.keys(devices)) {
       const d = devices[p];
-      const matches = Object.keys(d).filter((k) => k.endsWith("_entity")).length;
-      if (!d.soc_entity && matches < 2) {
+      const matched = Object.keys(d).filter((k) => k.endsWith("_entity"));
+      const credible =
+        d.soc_entity || matched.length >= 2 || (d.charge_entity && d.discharge_entity);
+      if (!credible) {
         delete devices[p];
         continue;
       }
 
-      // Secondary lookups within the same prefix
+      // Pass 2 — secondary roles among the same device (normalized prefix match).
       for (const eid of Object.keys(hass.states)) {
         const dot = eid.indexOf(".");
         const domain = eid.slice(0, dot);
-        const obj = eid.slice(dot + 1).toLowerCase();
-        if (!obj.startsWith(p)) continue;
+        const obj = eid.slice(dot + 1);
+        if (!norm(obj).startsWith(p)) continue;
         const st = hass.states[eid];
-        const attrs = (st && st.attributes) || {};
+        const a = (st && st.attributes) || {};
+        const unit = a.unit_of_measurement || "";
         if (domain === "sensor") {
-          if (!d.temp_entity && attrs.device_class === "temperature") d.temp_entity = eid;
-          if (
-            !d.energy_entity &&
-            /kwh/i.test(attrs.unit_of_measurement || "") &&
-            /avail|remain|kwh|energy/.test(obj)
-          )
-            d.energy_entity = eid;
+          if (!d.temp_entity && a.device_class === "temperature") d.temp_entity = eid;
+          if (!d.soc_entity && a.device_class === "battery" && /%/.test(unit)) d.soc_entity = eid;
+          if (a.device_class === "energy_storage" || /kwh/i.test(unit)) {
+            if (!d.capacity_entity && /(total|capacity|capacite|capacité)/i.test(obj))
+              d.capacity_entity = eid;
+            if (!d.energy_entity && /(avail|remain|dispo)/i.test(obj)) d.energy_entity = eid;
+          }
         } else if (domain === "select") {
-          if (/mode/.test(obj)) {
+          const opts = (a.options || []).map((o) => String(o).toLowerCase());
+          const hasIn = opts.includes("input") || opts.includes("charge");
+          const hasOut = opts.includes("output") || opts.includes("discharge");
+          if (hasIn && hasOut) {
+            if (!d.ac_mode_entity) d.ac_mode_entity = eid;
+          } else if (
+            /mode|operation|operating/i.test(obj) ||
+            opts.includes("smart") ||
+            opts.includes("manual")
+          ) {
             if (!d.mode_entity) d.mode_entity = eid;
             else {
               if (!d.select_entities) d.select_entities = [];
@@ -437,22 +466,25 @@
             }
           }
         } else if (domain === "number") {
-          if (!d.charge_limit_entity && /(input|charge)[_-]?limit/.test(obj))
+          if (!d.charge_limit_entity && /(input|charge).*limit|limit.*(input|charge)/i.test(obj))
             d.charge_limit_entity = eid;
-          if (!d.discharge_limit_entity && /(output|discharge)[_-]?limit/.test(obj))
+          if (
+            !d.discharge_limit_entity &&
+            /(output|discharge).*limit|limit.*(output|discharge)/i.test(obj)
+          )
             d.discharge_limit_entity = eid;
         }
       }
 
-      // Friendly device name (device registry when available)
-      let name = prettify(p);
+      // Friendly device name (device registry when available, else the prefix).
+      let name = prettify(reconstructPrefix(d.__sample || p, p));
       try {
-        const anyEid = d.soc_entity || d.solar_entity || d.home_entity;
+        const anyEid = d.soc_entity || d.charge_entity || d.solar_entity || d.discharge_entity;
         const reg = hass.entities && hass.entities[anyEid];
         const dev = reg && hass.devices && hass.devices[reg.device_id];
         if (dev && dev.name) name = dev.name;
       } catch (_e) {
-        /* registry not available — keep prettified prefix */
+        /* registry not available — keep the prettified prefix */
       }
       d.name = name;
     }
@@ -611,7 +643,7 @@
       if (!first) return { ...DEFAULTS };
       const cfg = { ...DEFAULTS };
       for (const k of Object.keys(first)) {
-        if (k === "__prefix") continue;
+        if (k.startsWith("__")) continue;
         cfg[k] = first[k];
       }
       return cfg;
@@ -2730,7 +2762,7 @@
           const d = this._devices[prefix];
           const merged = { ...this._config };
           for (const k of Object.keys(d)) {
-            if (k === "__prefix") continue;
+            if (k.startsWith("__")) continue;
             merged[k] = d[k];
           }
           ev.target.value = "";

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.1 — 2026-07-20
+
+- **Fix auto-detection for Hyper 2000 / SolarFlow 2400 (and others)** — entity
+  matching is now separator/case-insensitive, so the current snake_case naming
+  of the official integration (`output_pack_power`, `input_pack_power`,
+  `global_soc`, …) is recognised, not just the legacy camelCase. SoC is also
+  detected via `device_class: battery`, the AC charge/discharge selector and the
+  capacity/available energy sensors are picked up, and device names come from the
+  device registry. New regression test `scripts/test-detect.mjs` in CI.
+
 ## 1.5.0 — 2026-07-18
 
 Priority-2 feature pack — the money argument:

@@ -33,3 +33,5 @@ jobs:
       - run: node --check dist/zendure-dashboard-card.js
       - name: Load dist as ES module (like Home Assistant does)
         run: node scripts/test-module-load.mjs
+      - name: Device auto-detection
+        run: node scripts/test-detect.mjs
