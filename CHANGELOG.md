@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.5.2 — 2026-07-20
+
+- **Much richer auto-detection** for the official integration (SolarFlow 2400 AC,
+  Hyper 2000, Zendure Manager):
+  - Reserve / ceiling SoC (`min_soc`, `soc_set`), the discharge day/month/year
+    counters (→ savings), the total-capacity and available-energy sensors, and
+    the manual-power number are now picked up automatically.
+  - The operation-mode select is matched by its options (off/manual/smart…),
+    so unrelated selects (`grid_off_mode`, fan mode, tariff selects…) are no
+    longer mistaken for it.
+  - Manager-only setups (single signed net-power sensor, no split charge/
+    discharge) are supported: the net power feeds the status/ETA.
+  - Unrelated MQTT devices (e.g. a "Kit Zendure" power plug) are never picked up.
+- Detection test extended to the full SolarFlow 2400 AC entity set.
+
 ## 1.5.1 — 2026-07-20
 
 - **Fix auto-detection for Hyper 2000 / SolarFlow 2400 (and others)** — entity

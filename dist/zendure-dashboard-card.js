@@ -1,5 +1,5 @@
 /*!
- * Zendure Dashboard Card v1.5.1
+ * Zendure Dashboard Card v1.5.2
  * https://github.com/zarzak12/zendure-dashboard-card — MIT License
  */
 ﻿/*!
@@ -12,7 +12,7 @@
 (() => {
   "use strict";
 
-  const CARD_VERSION = "1.5.1";
+  const CARD_VERSION = "1.5.2";
   const CARD_TAG = "zendure-dashboard-card";
   const EDITOR_TAG = "zendure-dashboard-card-editor";
 
@@ -448,17 +448,44 @@
               d.capacity_entity = eid;
             if (!d.energy_entity && /(avail|remain|dispo)/i.test(obj)) d.energy_entity = eid;
           }
+          // Cumulative discharge counters → savings tiles (day / month / year).
+          if (a.device_class === "energy" && /(decharge|discharge)/i.test(obj)) {
+            if (!d.discharge_today_entity && /journ|daily|today/i.test(obj)) d.discharge_today_entity = eid;
+            else if (!d.discharge_month_entity && /mois|month/i.test(obj)) d.discharge_month_entity = eid;
+            else if (!d.discharge_year_entity && /annee|année|year/i.test(obj)) d.discharge_year_entity = eid;
+            else if (!d.discharge_total_entity && /total|aggr|cumul/i.test(obj)) d.discharge_total_entity = eid;
+          }
+          if (
+            a.device_class === "energy" &&
+            /charge/i.test(obj) &&
+            !/(decharge|discharge)/i.test(obj) &&
+            !d.charge_total_entity &&
+            /total|aggr|annee|année|year|cumul/i.test(obj)
+          )
+            d.charge_total_entity = eid;
+          // Single signed net battery power (e.g. Manager "Power") when there is no
+          // split charge/discharge — used as charge_entity (net = charge, sign via invert).
+          if (
+            !d.charge_entity &&
+            !d.discharge_entity &&
+            a.device_class === "power" &&
+            !/manual|manuel|solar|pv|home|maison|grid|r[eé]seau|pack|input|output|sortie|entr[eé]e/i.test(obj)
+          ) {
+            d.charge_entity = eid;
+          }
         } else if (domain === "select") {
           const opts = (a.options || []).map((o) => String(o).toLowerCase());
           const hasIn = opts.includes("input") || opts.includes("charge");
           const hasOut = opts.includes("output") || opts.includes("discharge");
+          // Only a real operation-mode select (off/manual/smart…) — not grid_off_mode,
+          // fan mode, connection mode, tariff selects, etc.
+          const isOperation =
+            opts.includes("smart") ||
+            opts.includes("manual") ||
+            /(^|_)operation(_|$)|operating/i.test(obj);
           if (hasIn && hasOut) {
             if (!d.ac_mode_entity) d.ac_mode_entity = eid;
-          } else if (
-            /mode|operation|operating/i.test(obj) ||
-            opts.includes("smart") ||
-            opts.includes("manual")
-          ) {
+          } else if (isOperation) {
             if (!d.mode_entity) d.mode_entity = eid;
             else {
               if (!d.select_entities) d.select_entities = [];
@@ -466,6 +493,7 @@
             }
           }
         } else if (domain === "number") {
+          const isSoc = a.device_class === "soc" || /soc/i.test(obj);
           if (!d.charge_limit_entity && /(input|charge).*limit|limit.*(input|charge)/i.test(obj))
             d.charge_limit_entity = eid;
           if (
@@ -473,6 +501,10 @@
             /(output|discharge).*limit|limit.*(output|discharge)/i.test(obj)
           )
             d.discharge_limit_entity = eid;
+          if (!d.min_soc_entity && isSoc && /min|reserve|reserv/i.test(obj)) d.min_soc_entity = eid;
+          if (!d.max_soc_entity && isSoc && /max|set|plafond|ceiling/i.test(obj)) d.max_soc_entity = eid;
+          if (!d.manual_power_entity && a.device_class === "power" && /manual|manuel/i.test(obj))
+            d.manual_power_entity = eid;
         }
       }
 
