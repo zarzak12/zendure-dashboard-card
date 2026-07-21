@@ -156,6 +156,24 @@ switch_entities:
 | `low_soc` | number | `15` | Low battery threshold in % (red below, amber below 2×) |
 | `flow_threshold` | number | `10` | Minimum power in W to animate a flow |
 
+### Savings entities — how they work
+
+The **Today / Month / Year** savings tiles need counters that **reset** each day / month / year, while the **Total** tile needs a **lifetime** counter.
+
+On the official integration the daily/monthly/yearly sensors (`…zendure_decharge_journaliere` / `_mois` / `_annee`) are **Home Assistant [Utility Meters](https://www.home-assistant.io/integrations/utility_meter/)** derived from the integration's lifetime total (`…aggr_discharge`, `state_class: total_increasing`). Put the lifetime total in `discharge_total_entity` (→ **Total** tile); put the period meters in the Today/Month/Year fields.
+
+If you don't have the period meters, create them from the lifetime total:
+
+```yaml
+# configuration.yaml
+utility_meter:
+  zendure_decharge_jour:   { source: sensor.solarflow_2400_ac_aggr_discharge, cycle: daily }
+  zendure_decharge_mois:   { source: sensor.solarflow_2400_ac_aggr_discharge, cycle: monthly }
+  zendure_decharge_annee:  { source: sensor.solarflow_2400_ac_aggr_discharge, cycle: yearly }
+```
+
+The **Auto-fill** button maps all of these automatically when the entities exist.
+
 ### Multiple devices
 
 Add one card per device — the auto-fill dropdown lists every detected Zendure device. The compact mode is handy for a stack of several batteries.
