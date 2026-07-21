@@ -129,7 +129,8 @@ switch_entities:
 | `alert_temp_max` | number | `50` | High-temperature alert threshold (°C) |
 | `show_alerts` | bool | `true` | Show the alerts banner |
 | `show_history` | bool | `true` | Show the 24 h battery-level graph |
-| `discharge_today_entity` / `discharge_month_entity` / `discharge_year_entity` | entity | — | Discharged energy (kWh) — feed the savings tiles |
+| `discharge_today_entity` / `discharge_month_entity` / `discharge_year_entity` | entity | — | Discharged energy (kWh) counters that **reset** daily / monthly / yearly (e.g. `…decharge_journaliere` / `_mois` / `_annee`) — feed the Today / Month / Year savings tiles. Don't put a lifetime total here. |
+| `discharge_total_entity` | entity | — | **Lifetime** discharged energy (e.g. `…aggr_discharge`) — shows the **Total** savings tile and drives cycles / efficiency / CO₂ |
 | `electricity_price` | number | `0.25` | Fixed €/kWh used for savings |
 | `price_entity` | entity | — | Dynamic €/kWh sensor (overrides the fixed price) |
 | `co2_factor` | number | `0.4` | kg CO₂ avoided per kWh |

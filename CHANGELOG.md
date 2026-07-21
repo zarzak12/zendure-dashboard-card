@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.3 — 2026-07-21
+
+- **Savings: new "Total" tile** — the lifetime discharged counter
+  (`discharge_total_entity`, e.g. `…aggr_discharge`) is shown as its own tile
+  instead of being mislabeled "This year". CO₂ avoided now prefers the lifetime
+  total. Clearer editor help: use the daily/monthly/yearly counters for
+  Today/Month/Year, and "Lifetime discharged" (Battery & health) for Total.
+
 ## 1.5.2 — 2026-07-20
 
 - **Much richer auto-detection** for the official integration (SolarFlow 2400 AC,

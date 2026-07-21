@@ -8,7 +8,7 @@
 (() => {
   "use strict";
 
-  const CARD_VERSION = "1.5.2";
+  const CARD_VERSION = "1.5.3";
   const CARD_TAG = "zendure-dashboard-card";
   const EDITOR_TAG = "zendure-dashboard-card-editor";
 
@@ -42,6 +42,7 @@
       sav_today: "Today",
       sav_month: "This month",
       sav_year: "This year",
+      sav_total: "Total",
       sav_co2: "CO₂ avoided",
       bal_title: "Energy balance",
       bal_selfcons: "Self-consumption",
@@ -112,7 +113,7 @@
       ed_nominal_helper: "New/rated capacity — enables the health % (current capacity ÷ nominal).",
       ed_charge_total: "Lifetime charged (kWh)",
       ed_discharge_total: "Lifetime discharged (kWh)",
-      ed_discharge_total_helper: "Cumulative discharged energy — enables the cycle count (÷ capacity) and efficiency.",
+      ed_discharge_total_helper: "Lifetime discharged energy (e.g. …aggr_discharge) — enables the cycle count (÷ capacity), the efficiency and the Total savings tile.",
       ed_show_details: "Battery details (available, health, cycles…)",
       ed_sec_advanced: "Manual control & alerts",
       ed_manual_power: "Manual power (number)",
@@ -138,7 +139,7 @@
       ed_discharge_today: "Discharged today (kWh)",
       ed_discharge_month: "Discharged this month (kWh)",
       ed_discharge_year: "Discharged this year (kWh)",
-      ed_savings_helper: "Savings = energy the battery discharged × price (grid import avoided).",
+      ed_savings_helper: "Savings = discharged energy × price. Use the counters that reset daily / monthly / yearly here (e.g. …decharge_journaliere / _mois / _annee). For the lifetime total, set “Lifetime discharged” in the Battery & health section (shown as the Total tile) — not here.",
       ed_co2_factor: "CO₂ factor (kg/kWh)",
       ed_sec_balance: "Energy balance",
       ed_show_balance: "Self-consumption / self-sufficiency block",
@@ -193,6 +194,7 @@
       sav_today: "Aujourd'hui",
       sav_month: "Ce mois",
       sav_year: "Cette année",
+      sav_total: "Total",
       sav_co2: "CO₂ évité",
       bal_title: "Bilan énergie",
       bal_selfcons: "Autoconsommation",
@@ -263,7 +265,7 @@
       ed_nominal_helper: "Capacité neuve — active le % de santé (capacité actuelle ÷ nominale).",
       ed_charge_total: "Charge cumulée (kWh)",
       ed_discharge_total: "Décharge cumulée (kWh)",
-      ed_discharge_total_helper: "Énergie déchargée cumulée — active le nombre de cycles (÷ capacité) et le rendement.",
+      ed_discharge_total_helper: "Énergie déchargée cumulée à vie (ex. …aggr_discharge) — active le nombre de cycles (÷ capacité), le rendement et la tuile Économies « Total ».",
       ed_show_details: "Détails batterie (disponible, santé, cycles…)",
       ed_sec_advanced: "Pilotage manuel & alertes",
       ed_manual_power: "Puissance manuelle (number)",
@@ -289,7 +291,7 @@
       ed_discharge_today: "Déchargé aujourd'hui (kWh)",
       ed_discharge_month: "Déchargé ce mois (kWh)",
       ed_discharge_year: "Déchargé cette année (kWh)",
-      ed_savings_helper: "Économies = énergie déchargée par la batterie × prix (import réseau évité).",
+      ed_savings_helper: "Économies = énergie déchargée × prix. Utilisez ici les compteurs qui se remettent à zéro jour / mois / année (ex. …decharge_journaliere / _mois / _annee). Pour le cumul à vie, renseignez « Décharge cumulée » dans la section Batterie & santé (affiché en tuile Total) — pas ici.",
       ed_co2_factor: "Facteur CO₂ (kg/kWh)",
       ed_sec_balance: "Bilan énergie",
       ed_show_balance: "Bloc autoconsommation / autonomie",
@@ -951,8 +953,8 @@
       if (c.discharge_today_entity) keys.push("today");
       if (c.discharge_month_entity) keys.push("month");
       if (c.discharge_year_entity) keys.push("year");
-      const total = c.discharge_year_entity || c.discharge_total_entity;
-      if (total) keys.push("co2");
+      if (c.discharge_total_entity) keys.push("total");
+      if (c.discharge_total_entity || c.discharge_year_entity) keys.push("co2");
       return keys;
     }
 
@@ -1593,10 +1595,7 @@
     _updateSavings() {
       const c = this._config;
       const h = this._hass;
-      if (!this.shadowRoot.getElementById("sv-today") &&
-          !this.shadowRoot.getElementById("sv-month") &&
-          !this.shadowRoot.getElementById("sv-year") &&
-          !this.shadowRoot.getElementById("sv-co2")) return;
+      if (!this.shadowRoot.querySelector(".savings")) return;
       const price = this._price();
       const money = (eid) => {
         const kwh = num(h, eid);
@@ -1609,7 +1608,9 @@
       setTxt("sv-today", money(c.discharge_today_entity));
       setTxt("sv-month", money(c.discharge_month_entity));
       setTxt("sv-year", money(c.discharge_year_entity));
-      const totalKwh = num(h, c.discharge_year_entity || c.discharge_total_entity);
+      setTxt("sv-total", money(c.discharge_total_entity));
+      // CO₂ avoided: prefer the lifetime total, else this year.
+      const totalKwh = num(h, c.discharge_total_entity || c.discharge_year_entity);
       setTxt("sv-co2", totalKwh === null ? "—" : fmtCo2(h, totalKwh * c.co2_factor));
     }
 

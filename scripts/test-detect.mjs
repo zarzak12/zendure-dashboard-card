@@ -130,7 +130,8 @@ check("SF full: capacity + available detected", d.capacity_entity && d.energy_en
 check("SF full: AC mode selector detected", d.ac_mode_entity === "select.solarflow_2400_ac_ac_mode");
 check("SF full: charge/discharge limits detected", d.charge_limit_entity && d.discharge_limit_entity);
 check("SF full: reserve/ceiling SoC detected", d.min_soc_entity === "number.solarflow_2400_ac_min_soc" && d.max_soc_entity === "number.solarflow_2400_ac_soc_set");
-check("SF full: discharge day/month/year detected", d.discharge_today_entity && d.discharge_month_entity && d.discharge_year_entity);
+check("SF full: discharge day/month/year detected", d.discharge_today_entity === "sensor.solarflow_2400_ac_zendure_decharge_journaliere" && d.discharge_month_entity && d.discharge_year_entity === "sensor.solarflow_2400_ac_zendure_decharge_annee");
+check("SF full: lifetime total = aggr_discharge (not year)", d.discharge_total_entity === "sensor.solarflow_2400_ac_aggr_discharge" && d.discharge_year_entity !== "sensor.solarflow_2400_ac_aggr_discharge");
 check("SF full: grid_off_mode NOT taken as operation mode", d.mode_entity !== "select.solarflow_2400_ac_grid_off_mode");
 check("SF full: no kit_zendure entity leaked", JSON.stringify(d).indexOf("kit_zendure") === -1);
 
